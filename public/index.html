@@ -1222,6 +1222,7 @@
       let activeTab = "sectors";
       let selectedSector = null;
       let pollInterval = null;
+      let hasInitialized = false;
 
       // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -1503,7 +1504,10 @@
             json.scanning     !== prevScanning ||
             json.error        !== prevError;
 
-          if (changed) render();
+          if (changed || !hasInitialized) {
+            render();
+            hasInitialized = true;
+          }
           updateHeader();
         } catch (e) {
           console.error("Poll error:", e);
