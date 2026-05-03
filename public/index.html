@@ -1493,18 +1493,11 @@
           const res = await fetch(API);
           const json = await res.json();
 
-          const prevUpdated  = state.lastUpdated;
-          const prevScanning = state.scanning;
-          const prevError    = state.error;
-
+          const prevState = JSON.stringify(state);
           state = { ...json };
+          const nextState = JSON.stringify(state);
 
-          const changed =
-            json.lastUpdated  !== prevUpdated  ||
-            json.scanning     !== prevScanning ||
-            json.error        !== prevError;
-
-          if (changed || !hasInitialized) {
+          if (prevState !== nextState || !hasInitialized) {
             render();
             hasInitialized = true;
           }
