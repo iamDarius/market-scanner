@@ -1060,6 +1060,21 @@
       .tab-breakouts { color: #36b5f5 !important; }
       .tab-breakouts.active { border-bottom-color: #36b5f5 !important; }
 
+      /* ── Persistent volume tab ── */
+      .tab-persistent { color: #f06030 !important; }
+      .tab-persistent.active { border-bottom-color: #f06030 !important; }
+      .streak-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .streak-5plus { color: var(--accent); }
+      .streak-3plus { color: var(--amber); }
+      .streak-2     { color: var(--text2); }
+
       /* ── History tab ── */
       .rank-up   { color: var(--accent); font-family: var(--mono); font-size: 11px; }
       .rank-down { color: var(--red);    font-family: var(--mono); font-size: 11px; }
@@ -1457,9 +1472,10 @@
         if (!state.data) return;
         lastCheckedState = {
           savedAt: new Date().toISOString(),
-          sectorRanks:     Object.fromEntries((state.data.sectors  || []).map((s, i) => [s.name, i])),
-          emergingTickers:  (state.data.emerging  || []).map(s => s.ticker),
-          breakoutTickers:  (state.data.breakouts || []).map(s => s.ticker),
+          sectorRanks:       Object.fromEntries((state.data.sectors  || []).map((s, i) => [s.name, i])),
+          emergingTickers:    (state.data.emerging        || []).map(s => s.ticker),
+          breakoutTickers:    (state.data.breakouts       || []).map(s => s.ticker),
+          persistentTickers:  (state.data.persistentVolume || []).map(s => s.ticker),
         };
         localStorage.setItem("lastChecked", JSON.stringify(lastCheckedState));
       }
@@ -1661,6 +1677,7 @@
       }" onclick="switchTab('industries')">Industries</button>
       <button class="tab ${activeTab === "stocks" ? "active" : ""}" onclick="switchTab('stocks')">Stocks</button>
       <button class="tab tab-breakouts ${activeTab === "breakouts" ? "active" : ""}" onclick="switchTab('breakouts')">🎯 Breakouts</button>
+      <button class="tab tab-persistent ${activeTab === "persistent" ? "active" : ""}" onclick="switchTab('persistent')">🔥 Persistent</button>
       <button class="tab ${activeTab === "history" ? "active" : ""}" onclick="switchTab('history')">📈 History</button>
       <button class="tab ${activeTab === "emerging" ? "active" : ""}" onclick="switchTab('emerging')" style="color:${
           activeTab === "emerging" ? "var(--accent)" : "#a060f0"
@@ -1672,6 +1689,7 @@
       ${activeTab === "industries" ? renderIndustriesTab(industries) : ""}
       ${activeTab === "stocks" ? renderStocksTab(stocks) : ""}
       ${activeTab === "breakouts" ? renderBreakoutsTab(d.breakouts || [], d.spy) : ""}
+      ${activeTab === "persistent" ? renderPersistentVolumeTab(d.persistentVolume || []) : ""}
       ${activeTab === "history" ? renderHistoryTab(state.history || []) : ""}
       ${activeTab === "emerging" ? renderEmergingTab(d.emerging || []) : ""}
     </div>
@@ -2009,6 +2027,56 @@
         <th class="r">1W</th><th class="r">1M</th><th class="r">3M</th>
         <th class="r">RS vs SPY</th>
         <th class="r">Rel vol</th><th class="r">RSI</th><th class="r">Mkt cap</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+      }
+
+      // ─── Persistent volume tab ────────────────────────────────────────────────────
+
+      function renderPersistentVolumeTab(stocks) {
+        if (!stocks || !stocks.length) {
+          return `
+    <div class="empty fade-in">
+      <div class="empty-icon">🔥</div>
+      <h2>No persistent unusual volume yet</h2>
+      <p style="color:var(--text2);">Stocks that show unusual volume on 2 or more different days will appear here. Run scans on multiple days to start tracking.</p>
+    </div>`;
+        }
+
+        const rows = stocks.map((s, i) => {
+          const streakCls = s.streakDays >= 5 ? "streak-5plus" : s.streakDays >= 3 ? "streak-3plus" : "streak-2";
+          const flames = "🔥".repeat(Math.min(s.streakDays, 3));
+          return `
+    <tr>
+      <td class="rank">${String(i + 1).padStart(2, "0")}</td>
+      <td>${tickerWithNote(s.ticker, s.description)}</td>
+      <td>
+        <div class="row-name" style="font-size:12px;">${s.description || "—"}</div>
+        <div class="row-sub">${s.industry || ""}</div>
+      </td>
+      <td><span class="sec-tag">${s.sector || "—"}</span></td>
+      <td class="r"><span class="streak-badge ${streakCls}">${flames} ${s.streakDays}d</span></td>
+      <td class="r">${s.relVol != null ? `<span style="font-family:var(--mono);font-size:11px;color:var(--text2);">${parseFloat(s.relVol).toFixed(1)}x</span>` : "—"}</td>
+      <td class="r" style="font-family:var(--mono);font-size:10px;color:var(--text3);">${s.firstSeen || "—"}</td>
+      <td class="r" style="font-family:var(--mono);font-size:10px;color:var(--text3);">${s.lastSeen || "—"}</td>
+    </tr>`;
+        }).join("");
+
+        return `
+  <div class="table-wrap fade-in">
+    <div class="table-header">
+      <span class="table-title">Persistent unusual volume</span>
+      <span class="table-meta">${stocks.length} stock${stocks.length !== 1 ? "s" : ""} · unusual volume on 2+ days</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Ticker</th><th>Name</th><th>Sector</th>
+        <th class="r">Vol streak</th>
+        <th class="r">Rel vol</th>
+        <th class="r">First seen</th>
+        <th class="r">Last seen</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>

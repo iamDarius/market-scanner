@@ -47,6 +47,69 @@ app.get("*", (req, res, next) => {
 const HISTORY_FILE = path.join(__dirname, "scan-history.json");
 const MAX_HISTORY = 10;
 
+// ─── Volume tracking ─────────────────────────────────────────────────────────
+
+const VOLUME_FILE = path.join(__dirname, "volume-tracking.json");
+const MAX_VOLUME_DAYS = 30;
+
+let volumeHistory = [];
+try {
+  if (fs.existsSync(VOLUME_FILE)) {
+    volumeHistory = JSON.parse(fs.readFileSync(VOLUME_FILE, "utf8"));
+  }
+} catch {
+  volumeHistory = [];
+}
+
+function saveVolumeHistory() {
+  try {
+    fs.writeFileSync(VOLUME_FILE, JSON.stringify(volumeHistory));
+  } catch (err) {
+    console.error(`[volume] Save failed: ${err.message}`);
+  }
+}
+
+function updateVolumeHistory(emerging, breakouts) {
+  const today = new Date().toISOString().slice(0, 10);
+  const stockMap = new Map();
+  for (const s of [...(emerging || []), ...(breakouts || [])]) {
+    if (!s.ticker || stockMap.has(s.ticker)) continue;
+    stockMap.set(s.ticker, {
+      ticker: s.ticker,
+      description: s.description,
+      sector: s.sector,
+      industry: s.industry,
+      relVol: s.relVol,
+    });
+  }
+  const entry = { date: today, tickers: [...stockMap.values()] };
+  const idx = volumeHistory.findIndex((h) => h.date === today);
+  if (idx >= 0) volumeHistory[idx] = entry;
+  else volumeHistory.push(entry);
+  if (volumeHistory.length > MAX_VOLUME_DAYS) volumeHistory = volumeHistory.slice(-MAX_VOLUME_DAYS);
+  saveVolumeHistory();
+}
+
+function computePersistentVolume() {
+  if (volumeHistory.length < 2) return [];
+  const tickerDays = new Map();
+  const tickerData = new Map();
+  for (const entry of volumeHistory) {
+    for (const stock of entry.tickers) {
+      if (!tickerDays.has(stock.ticker)) tickerDays.set(stock.ticker, new Set());
+      tickerDays.get(stock.ticker).add(entry.date);
+      tickerData.set(stock.ticker, stock);
+    }
+  }
+  const result = [];
+  for (const [ticker, days] of tickerDays) {
+    if (days.size < 2) continue;
+    const sorted = [...days].sort();
+    result.push({ ...tickerData.get(ticker), streakDays: days.size, firstSeen: sorted[0], lastSeen: sorted[sorted.length - 1] });
+  }
+  return result.sort((a, b) => b.streakDays - a.streakDays || (b.relVol || 0) - (a.relVol || 0));
+}
+
 let scanHistory = [];
 try {
   if (fs.existsSync(HISTORY_FILE)) {
@@ -165,12 +228,16 @@ app.post("/api/scan", (req, res) => {
   if (scanHistory.length > MAX_HISTORY) scanHistory.shift();
   saveHistory();
 
+  updateVolumeHistory(emerging, breakouts);
+  const persistentVolume = computePersistentVolume();
+
   store.data = {
     sectors: enrichedSectors,
     industries: industries || [],
     stocks: stocks || [],
     emerging: emerging || [],
     breakouts: breakouts || [],
+    persistentVolume,
     spy: spy || null,
     meta: meta || {},
   };
