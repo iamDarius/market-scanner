@@ -1492,8 +1492,16 @@
           const res = await fetch(API);
           const json = await res.json();
 
-          const changed = JSON.stringify(json) !== JSON.stringify(state);
+          const prevUpdated  = state.lastUpdated;
+          const prevScanning = state.scanning;
+          const prevError    = state.error;
+
           state = { ...json };
+
+          const changed =
+            json.lastUpdated  !== prevUpdated  ||
+            json.scanning     !== prevScanning ||
+            json.error        !== prevError;
 
           if (changed) render();
           updateHeader();
