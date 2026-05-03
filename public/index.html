@@ -1059,6 +1059,25 @@
       /* ── Breakouts tab ── */
       .tab-breakouts { color: #36b5f5 !important; }
       .tab-breakouts.active { border-bottom-color: #36b5f5 !important; }
+
+      /* ── History tab ── */
+      .rank-up   { color: var(--accent); font-family: var(--mono); font-size: 11px; }
+      .rank-down { color: var(--red);    font-family: var(--mono); font-size: 11px; }
+      .rank-same { color: var(--text3);  font-family: var(--mono); font-size: 11px; }
+      .hist-rank {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+        width: 28px;
+        text-align: center;
+        border-radius: 4px;
+        padding: 1px 0;
+      }
+      .hist-rank.r1, .hist-rank.r2 { color: var(--accent); }
+      .hist-rank.r3, .hist-rank.r4 { color: var(--amber); }
+      .hist-rank.r5, .hist-rank.r6 { color: var(--text2); }
+      .hist-rank.absent { color: var(--text3); }
       .pct-high {
         font-family: var(--mono);
         font-size: 12px;
@@ -1075,6 +1094,79 @@
         color: var(--text2);
       }
 
+      /* ── Column sorting ── */
+      thead th.sortable { cursor: pointer; user-select: none; }
+      thead th.sortable:hover { color: var(--text2); }
+      thead th.sort-active { color: var(--accent) !important; }
+      .sort-arrow { font-size: 9px; margin-left: 3px; }
+
+      /* ── Ticker notes ── */
+      .ticker-cell { display: flex; align-items: center; gap: 5px; }
+      .note-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 12px;
+        color: var(--text3);
+        padding: 0;
+        opacity: 0.3;
+        transition: opacity 0.15s;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .note-btn:hover, .note-btn.has-note { opacity: 1; }
+      .note-btn.has-note { color: var(--amber); }
+      .note-textarea {
+        width: 100%;
+        min-height: 110px;
+        background: var(--bg3);
+        border: 1px solid var(--border2);
+        border-radius: 8px;
+        padding: 12px;
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 13px;
+        resize: vertical;
+        line-height: 1.5;
+        outline: none;
+      }
+      .note-textarea:focus { border-color: var(--accent); }
+
+      /* ── Tab badges ── */
+      .tab-badge {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--amber);
+        margin-left: 5px;
+        vertical-align: middle;
+        margin-bottom: 2px;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      /* ── Schedule / countdown ── */
+      .interval-select {
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text2);
+        font-size: 11px;
+        font-family: var(--mono);
+        padding: 4px 6px;
+        cursor: pointer;
+        outline: none;
+        appearance: none;
+        -webkit-appearance: none;
+      }
+      .interval-select:hover { border-color: var(--border2); }
+      .countdown-label {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+        white-space: nowrap;
+      }
+
       /* ── Responsive ── */
       @media (max-width: 900px) {
         .summary-row {
@@ -1085,15 +1177,18 @@
         }
       }
       @media (max-width: 600px) {
-        .summary-row {
-          grid-template-columns: 1fr 1fr;
-        }
-        main {
-          padding: 20px 12px 48px;
-        }
-        header {
-          padding: 0 12px;
-        }
+        .summary-row { grid-template-columns: 1fr 1fr; }
+        main { padding: 20px 12px 48px; }
+        header { padding: 0 12px; }
+        .btn-scan { padding: 5px 10px; font-size: 11px; }
+        .countdown-label { display: none; }
+      }
+
+      /* ── Mobile table layout ── */
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      @media (max-width: 768px) {
+        .hide-mobile { display: none !important; }
+        table { min-width: 480px; }
       }
     </style>
   </head>
@@ -1105,6 +1200,7 @@
           Market Scanner
         </div>
         <div class="header-spacer"></div>
+        <button class="btn-scan" id="scan-btn" onclick="triggerScan()">Scan Now</button>
         <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode">☀︎</button>
         <div class="status-pill">
           <div class="status-dot" id="status-dot"></div>
@@ -1122,7 +1218,7 @@
 
     <script>
       const API = "/api/data";
-      let state = { data: null, scanning: false, error: null, lastUpdated: null };
+      let state = { data: null, scanning: false, error: null, lastUpdated: null, history: [] };
       let activeTab = "sectors";
       let selectedSector = null;
       let pollInterval = null;
@@ -1222,6 +1318,173 @@
         return t ? `<span class="etf-chip">${t}</span>` : "";
       }
 
+      // ─── Column sorting ───────────────────────────────────────────────────────────
+
+      let sortConfig = {
+        sectors:    { col: "score",       dir: "desc" },
+        industries: { col: "perf3M",      dir: "desc" },
+        stocks:     { col: "perf3M",      dir: "desc" },
+        breakouts:  { col: "pctFromHigh", dir: "asc"  },
+      };
+
+      function sortData(arr, tab) {
+        const { col, dir } = sortConfig[tab] || {};
+        if (!col) return arr;
+        return [...arr].sort((a, b) => {
+          const av = a[col] ?? (dir === "asc" ? Infinity : -Infinity);
+          const bv = b[col] ?? (dir === "asc" ? Infinity : -Infinity);
+          if (typeof av === "string") return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+          return dir === "asc" ? av - bv : bv - av;
+        });
+      }
+
+      function sortTable(tab, col) {
+        const cfg = sortConfig[tab];
+        if (!cfg) return;
+        if (cfg.col === col) {
+          cfg.dir = cfg.dir === "asc" ? "desc" : "asc";
+        } else {
+          cfg.col = col;
+          cfg.dir = col === "pctFromHigh" || col === "name" ? "asc" : "desc";
+        }
+        const tc = document.getElementById("tab-content");
+        if (!tc || !state.data) return;
+        const d = state.data;
+        if (tab === "sectors")    tc.innerHTML = renderSectorsTab(d.sectors || [], d.industries || []);
+        if (tab === "industries") tc.innerHTML = renderIndustriesTab(d.industries || []);
+        if (tab === "stocks")     tc.innerHTML = renderStocksTab(d.stocks || []);
+        if (tab === "breakouts")  tc.innerHTML = renderBreakoutsTab(d.breakouts || [], d.spy);
+      }
+
+      function sortTh(label, tab, col, extraClass = "r") {
+        const { col: active, dir } = sortConfig[tab] || {};
+        const isActive = active === col;
+        const arrow = isActive ? `<span class="sort-arrow">${dir === "asc" ? "↑" : "↓"}</span>` : "";
+        return `<th class="${extraClass} sortable${isActive ? " sort-active" : ""}" onclick="sortTable('${tab}','${col}')">${label}${arrow}</th>`;
+      }
+
+      // ─── Ticker notes ─────────────────────────────────────────────────────────────
+
+      function getNotes() {
+        try { return JSON.parse(localStorage.getItem("ticker-notes") || "{}"); }
+        catch { return {}; }
+      }
+
+      function saveNote(ticker, text) {
+        const notes = getNotes();
+        if (text.trim()) notes[ticker] = text.trim();
+        else delete notes[ticker];
+        localStorage.setItem("ticker-notes", JSON.stringify(notes));
+      }
+
+      function openNoteModal(ticker, description) {
+        const existing = getNotes()[ticker] || "";
+        const safeDesc = (description || "").replace(/"/g, "&quot;");
+        document.body.insertAdjacentHTML("beforeend", `
+  <div class="modal-overlay" id="note-modal" onclick="closeNoteIfBg(event)">
+    <div class="modal" style="width:420px;">
+      <div class="modal-head">
+        <div style="display:flex;align-items:baseline;gap:10px;">
+          <span class="modal-title">${ticker}</span>
+          <span style="font-size:12px;color:var(--text2);">${safeDesc}</span>
+        </div>
+        <button class="modal-close" onclick="closeNoteModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="note-ta" class="note-textarea"
+          placeholder="Levels, thesis, catalysts…"
+          onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))saveNoteFromModal('${ticker}')">${existing}</textarea>
+        <div class="modal-actions" style="margin-top:12px;">
+          <button class="btn-primary" onclick="saveNoteFromModal('${ticker}')">Save</button>
+          ${existing ? `<button class="btn-secondary" onclick="deleteNote('${ticker}')">Delete</button>` : ""}
+          <button class="btn-secondary" onclick="closeNoteModal()">Cancel</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;">⌘/Ctrl+Enter to save · stored locally in browser</div>
+      </div>
+    </div>
+  </div>`);
+        setTimeout(() => document.getElementById("note-ta")?.focus(), 30);
+      }
+
+      function saveNoteFromModal(ticker) {
+        const text = document.getElementById("note-ta")?.value || "";
+        saveNote(ticker, text);
+        closeNoteModal();
+        render();
+      }
+
+      function deleteNote(ticker) {
+        saveNote(ticker, "");
+        closeNoteModal();
+        render();
+      }
+
+      function closeNoteModal() { document.getElementById("note-modal")?.remove(); }
+      function closeNoteIfBg(e) { if (e.target.id === "note-modal") closeNoteModal(); }
+
+      function tickerWithNote(ticker, description) {
+        const hasNote = !!getNotes()[ticker];
+        const safeDesc = (description || "").replace(/'/g, "\\'");
+        return `<div class="ticker-cell">
+          ${tickerChip(ticker)}
+          <button class="note-btn${hasNote ? " has-note" : ""}"
+            onclick="event.stopPropagation();openNoteModal('${ticker}','${safeDesc}')"
+            title="${hasNote ? "Edit note" : "Add note"}">✎</button>
+        </div>`;
+      }
+
+      // ─── Tab badges ───────────────────────────────────────────────────────────────
+
+      let lastCheckedState = null;
+      try { lastCheckedState = JSON.parse(localStorage.getItem("lastChecked") || "null"); }
+      catch { lastCheckedState = null; }
+
+      function computeBadges() {
+        if (!lastCheckedState || !state.data) return {};
+        const b = {};
+        const currRanks = Object.fromEntries((state.data.sectors || []).map((s, i) => [s.name, i]));
+        if (Object.entries(currRanks).some(([n, r]) => lastCheckedState.sectorRanks?.[n] !== r)) b.sectors = true;
+        const currE = new Set((state.data.emerging  || []).map(s => s.ticker));
+        const prevE = new Set(lastCheckedState.emergingTickers  || []);
+        if ([...currE].some(t => !prevE.has(t))) b.emerging = true;
+        const currBk = new Set((state.data.breakouts || []).map(s => s.ticker));
+        const prevBk = new Set(lastCheckedState.breakoutTickers || []);
+        if ([...currBk].some(t => !prevBk.has(t))) b.breakouts = true;
+        return b;
+      }
+
+      function saveLastChecked() {
+        if (!state.data) return;
+        lastCheckedState = {
+          savedAt: new Date().toISOString(),
+          sectorRanks:     Object.fromEntries((state.data.sectors  || []).map((s, i) => [s.name, i])),
+          emergingTickers:  (state.data.emerging  || []).map(s => s.ticker),
+          breakoutTickers:  (state.data.breakouts || []).map(s => s.ticker),
+        };
+        localStorage.setItem("lastChecked", JSON.stringify(lastCheckedState));
+      }
+
+      document.addEventListener("visibilitychange", () => { if (document.hidden) saveLastChecked(); });
+
+      // ─── Schedule / countdown ─────────────────────────────────────────────────────
+
+      async function setScheduleInterval(mins) {
+        await fetch("/api/schedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intervalMins: parseInt(mins) }),
+        });
+      }
+
+      function getCountdown(nextScanAt) {
+        if (!nextScanAt) return null;
+        const ms = new Date(nextScanAt) - Date.now();
+        if (ms <= 0) return "soon";
+        const m = Math.floor(ms / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        return `${m}:${String(s).padStart(2, "0")}`;
+      }
+
       // ─── Polling ──────────────────────────────────────────────────────────────────
 
       async function poll() {
@@ -1246,28 +1509,60 @@
 
       // ─── Header ───────────────────────────────────────────────────────────────────
 
+      async function triggerScan() {
+        const btn = document.getElementById("scan-btn");
+        if (!btn || state.scanning) return;
+        try {
+          btn.disabled = true;
+          btn.textContent = "Starting...";
+          const res = await fetch("/api/scan/run", { method: "POST" });
+          if (!res.ok) {
+            const j = await res.json();
+            console.error("Scan trigger failed:", j.error);
+            btn.disabled = false;
+            btn.textContent = "Scan Now";
+          }
+        } catch (e) {
+          console.error("Scan trigger error:", e);
+          btn.disabled = false;
+          btn.textContent = "Scan Now";
+        }
+      }
+
+      function rankChangeBadge(v) {
+        if (v == null) return '<span class="rank-same">—</span>';
+        if (v > 0) return `<span class="rank-up">▲${v}</span>`;
+        if (v < 0) return `<span class="rank-down">▼${Math.abs(v)}</span>`;
+        return '<span class="rank-same">—</span>';
+      }
+
       function updateHeader() {
         const dot = document.getElementById("status-dot");
         const txt = document.getElementById("status-text");
         const ts = document.getElementById("ts-display");
+        const btn = document.getElementById("scan-btn");
 
         dot.className = "status-dot";
 
         if (state.scanning) {
           dot.classList.add("scanning");
           txt.textContent = "Scanning...";
+          if (btn) { btn.disabled = true; btn.textContent = "Scanning..."; }
         } else if (state.error) {
           dot.classList.add("error");
           txt.textContent = "Error";
+          if (btn) { btn.disabled = false; btn.textContent = "Scan Now"; }
         } else if (state.data) {
           dot.classList.add("live");
           txt.textContent = "Live";
+          if (btn) { btn.disabled = false; btn.textContent = "Scan Now"; }
           if (state.lastUpdated) {
             ts.style.display = "block";
             ts.textContent = "Updated " + new Date(state.lastUpdated).toLocaleTimeString();
           }
         } else {
           txt.textContent = "Waiting for data";
+          if (btn) { btn.disabled = false; btn.textContent = "Scan Now"; }
         }
       }
 
@@ -1366,6 +1661,7 @@
       }" onclick="switchTab('industries')">Industries</button>
       <button class="tab ${activeTab === "stocks" ? "active" : ""}" onclick="switchTab('stocks')">Stocks</button>
       <button class="tab tab-breakouts ${activeTab === "breakouts" ? "active" : ""}" onclick="switchTab('breakouts')">🎯 Breakouts</button>
+      <button class="tab ${activeTab === "history" ? "active" : ""}" onclick="switchTab('history')">📈 History</button>
       <button class="tab ${activeTab === "emerging" ? "active" : ""}" onclick="switchTab('emerging')" style="color:${
           activeTab === "emerging" ? "var(--accent)" : "#a060f0"
         };">⚡ Emerging</button>
@@ -1376,6 +1672,7 @@
       ${activeTab === "industries" ? renderIndustriesTab(industries) : ""}
       ${activeTab === "stocks" ? renderStocksTab(stocks) : ""}
       ${activeTab === "breakouts" ? renderBreakoutsTab(d.breakouts || [], d.spy) : ""}
+      ${activeTab === "history" ? renderHistoryTab(state.history || []) : ""}
       ${activeTab === "emerging" ? renderEmergingTab(d.emerging || []) : ""}
     </div>
   `;
@@ -1400,6 +1697,7 @@
         <td class="r">${perfCell(s.perf1M)}</td>
         <td class="r">${perfCell(s.perf3M)}</td>
         <td class="r">${signal(s)}</td>
+        <td class="r">${rankChangeBadge(s.rankChange)}</td>
         <td class="r">
           <div class="bar-cell">
             ${barCell(s.perf3M, maxPerf)}
@@ -1475,6 +1773,7 @@
           <th class="r">1M</th>
           <th class="r">3M</th>
           <th class="r">Signal</th>
+          <th class="r">Rank Δ</th>
           <th class="r" style="width:120px;">Trend (3M)</th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -1716,6 +2015,77 @@
   </div>`;
       }
 
+      // ─── History tab ──────────────────────────────────────────────────────────────
+
+      function renderHistoryTab(history) {
+        if (!history || history.length < 2) {
+          return `
+    <div class="empty fade-in">
+      <div class="empty-icon">📈</div>
+      <h2>No history yet</h2>
+      <p style="color:var(--text2);">Run the scanner at least twice to start tracking sector rotation.</p>
+    </div>`;
+        }
+
+        // Collect all sector names, ordered by most recent ranking
+        const latest = history[history.length - 1].sectors || [];
+        const allNames = [...new Set([
+          ...latest.map((s) => s.name),
+          ...history.flatMap((h) => (h.sectors || []).map((s) => s.name)),
+        ])];
+
+        // Show last 6 scans newest-first
+        const scans = [...history].reverse().slice(0, 6);
+
+        const dateHeaders = scans.map((h) => {
+          const d = new Date(h.scannedAt);
+          return `<th class="r" style="font-size:10px;min-width:90px;">${d.toLocaleDateString([], {month:"short",day:"numeric"})}<br><span style="color:var(--text3)">${d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span></th>`;
+        }).join("");
+
+        const rows = allNames.map((name) => {
+          const cells = scans.map((scan) => {
+            const rank = (scan.sectors || []).findIndex((s) => s.name === name);
+            if (rank === -1) return `<td class="r"><span class="hist-rank absent">—</span></td>`;
+            const n = rank + 1;
+            const cls = n <= 2 ? "r1" : n <= 4 ? "r3" : "r5";
+            return `<td class="r"><span class="hist-rank ${cls}">#${n}</span></td>`;
+          }).join("");
+
+          // Trend: compare rank in newest vs oldest visible scan
+          const newestRank = (scans[0].sectors || []).findIndex((s) => s.name === name);
+          const oldestRank = (scans[scans.length - 1].sectors || []).findIndex((s) => s.name === name);
+          let trend = "";
+          if (newestRank !== -1 && oldestRank !== -1) {
+            const delta = oldestRank - newestRank;
+            if (delta > 0) trend = `<span class="rank-up">▲${delta}</span>`;
+            else if (delta < 0) trend = `<span class="rank-down">▼${Math.abs(delta)}</span>`;
+            else trend = `<span class="rank-same">—</span>`;
+          }
+
+          return `<tr>
+            <td class="row-name" style="min-width:160px;">${name}</td>
+            ${cells}
+            <td class="r">${trend}</td>
+          </tr>`;
+        }).join("");
+
+        return `
+  <div class="table-wrap fade-in">
+    <div class="table-header">
+      <span class="table-title">Sector rotation — rank history</span>
+      <span class="table-meta">${history.length} scan${history.length !== 1 ? "s" : ""} recorded</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Sector</th>
+        ${dateHeaders}
+        <th class="r">Trend</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+      }
+
       function fmt(v) {
         if (v == null) return "—";
         return (v > 0 ? "+" : "") + parseFloat(v).toFixed(2) + "%";
@@ -1924,6 +2294,7 @@
       }
 
       // make these global
+      window.triggerScan = triggerScan;
       window.switchTab = switchTab;
       window.toggleDrill = toggleDrill;
       window.toggleTheme = toggleTheme;

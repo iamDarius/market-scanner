@@ -14,6 +14,8 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
+const { spawn, exec } = require("child_process");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +42,97 @@ app.get("*", (req, res, next) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 
+// ─── Scan history ────────────────────────────────────────────────────────────
+
+const HISTORY_FILE = path.join(__dirname, "scan-history.json");
+const MAX_HISTORY = 10;
+
+let scanHistory = [];
+try {
+  if (fs.existsSync(HISTORY_FILE)) {
+    scanHistory = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf8"));
+  }
+} catch {
+  scanHistory = [];
+}
+
+function saveHistory() {
+  try {
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(scanHistory));
+  } catch (err) {
+    console.error(`[history] Save failed: ${err.message}`);
+  }
+}
+
+function computeSectorTrends(newSectors) {
+  if (!scanHistory.length) return newSectors;
+  const prev = scanHistory[scanHistory.length - 1].sectors || [];
+  const prevRank = Object.fromEntries(prev.map((s, i) => [s.name, i]));
+  return newSectors.map((s, i) => {
+    const p = prevRank[s.name];
+    return { ...s, rankChange: p != null ? p - i : null };
+  });
+}
+
+// ─── Breakout alerts ─────────────────────────────────────────────────────────
+
+const alertedTickers = new Set();
+
+function sendNotification(title, message) {
+  const t = title.replace(/['"\\]/g, " ");
+  const m = message.replace(/['"\\]/g, " ");
+  exec(`osascript -e 'display notification "${m}" with title "${t}"'`, () => {});
+}
+
+function checkBreakoutAlerts(breakouts) {
+  if (!breakouts || !breakouts.length) return;
+  const currentTickers = new Set(breakouts.map((s) => s.ticker));
+  for (const t of alertedTickers) {
+    if (!currentTickers.has(t)) alertedTickers.delete(t);
+  }
+  for (const s of breakouts) {
+    if (s.pctFromHigh != null && s.pctFromHigh <= 1 && !alertedTickers.has(s.ticker)) {
+      alertedTickers.add(s.ticker);
+      sendNotification(
+        `Breakout: ${s.ticker}`,
+        `${(s.description || s.ticker).slice(0, 40)} — ${s.pctFromHigh.toFixed(1)}% from 52W high`
+      );
+      console.log(`[alert] ${s.ticker} within ${s.pctFromHigh}% of 52W high`);
+    }
+  }
+}
+
+// ─── In-memory store ─────────────────────────────────────────────────────────
+
+// ─── Auto-scan schedule ──────────────────────────────────────────────────────
+
+let scanTimer = null;
+
+function spawnScanner() {
+  if (store.scanning) return false;
+  const scannerPath = path.join(__dirname, "market-scanner.js");
+  const child = spawn(process.execPath, [scannerPath], { detached: false, stdio: "inherit" });
+  child.on("error", (err) => {
+    console.error(`[scanner] ${err.message}`);
+    store.scanning = false;
+    store.error = err.message;
+  });
+  return true;
+}
+
+function startScanSchedule(intervalMins) {
+  if (scanTimer) clearInterval(scanTimer);
+  store.scanIntervalMins = intervalMins;
+  const ms = intervalMins * 60 * 1000;
+  store.nextScanAt = new Date(Date.now() + ms).toISOString();
+  scanTimer = setInterval(() => {
+    console.log(`[schedule] Auto-scan triggered (every ${intervalMins}m)`);
+    spawnScanner();
+    store.nextScanAt = new Date(Date.now() + ms).toISOString();
+  }, ms);
+  console.log(`  Schedule:  auto-scan every ${intervalMins} minutes`);
+}
+
 // ─── In-memory store ─────────────────────────────────────────────────────────
 
 let store = {
@@ -48,6 +141,8 @@ let store = {
   scanStarted: null,
   data: null,
   error: null,
+  nextScanAt: null,
+  scanIntervalMins: 15,
 };
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -60,8 +155,18 @@ app.post("/api/scan", (req, res) => {
     return res.status(400).json({ error: "Invalid payload: sectors array required" });
   }
 
+  const enrichedSectors = computeSectorTrends(sectors);
+  checkBreakoutAlerts(breakouts);
+
+  scanHistory.push({
+    scannedAt: new Date().toISOString(),
+    sectors: sectors.map((s) => ({ name: s.name, score: s.score })),
+  });
+  if (scanHistory.length > MAX_HISTORY) scanHistory.shift();
+  saveHistory();
+
   store.data = {
-    sectors,
+    sectors: enrichedSectors,
     industries: industries || [],
     stocks: stocks || [],
     emerging: emerging || [],
@@ -106,6 +211,9 @@ app.get("/api/data", (req, res) => {
     scanStarted: store.scanStarted,
     error: store.error,
     data: store.data,
+    history: scanHistory.map((h) => ({ scannedAt: h.scannedAt, sectors: h.sectors })),
+    nextScanAt: store.nextScanAt,
+    scanIntervalMins: store.scanIntervalMins,
   });
 });
 
@@ -119,6 +227,22 @@ app.get("/api/status", (req, res) => {
   });
 });
 
+// POST /api/scan/run — trigger scanner from UI
+app.post("/api/scan/run", (req, res) => {
+  if (!spawnScanner()) return res.status(409).json({ error: "Scan already in progress" });
+  res.json({ ok: true });
+});
+
+// POST /api/schedule — change auto-scan interval
+app.post("/api/schedule", (req, res) => {
+  const mins = parseInt(req.body.intervalMins);
+  if (!mins || mins < 1 || mins > 1440) {
+    return res.status(400).json({ error: "intervalMins must be 1–1440" });
+  }
+  startScanSchedule(mins);
+  res.json({ ok: true, intervalMins: mins, nextScanAt: store.nextScanAt });
+});
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
@@ -126,5 +250,7 @@ app.listen(PORT, () => {
   console.log(`  ─────────────────────────────────────`);
   console.log(`  Local:    http://localhost:${PORT}`);
   console.log(`  API:      http://localhost:${PORT}/api/scan  (POST)`);
-  console.log(`  ─────────────────────────────────────\n`);
+  console.log(`  ─────────────────────────────────────`);
+  startScanSchedule(15);
+  console.log();
 });
