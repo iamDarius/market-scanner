@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Market Scanner</title>
+
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0a0c0f;
+        --bg2: #111318;
+        --bg3: #181c22;
+        --bg4: #1e232b;
+        --border: rgba(255, 255, 255, 0.07);
+        --border2: rgba(255, 255, 255, 0.12);
+        --text: #e8eaf0;
+        --text2: #8b909c;
+        --text3: #545966;
+        --accent: #00c97a;
+        --red: #f04040;
+        --amber: #e09418;
+        --mono: "SF Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+        --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        --header-bg: rgba(10, 12, 15, 0.92);
+        --grid-line: rgba(255, 255, 255, 0.015);
+      }
+
+      :root.light {
+        --bg: #f4f5f7;
+        --bg2: #ffffff;
+        --bg3: #f0f1f3;
+        --bg4: #e8eaed;
+        --border: rgba(0, 0, 0, 0.08);
+        --border2: rgba(0, 0, 0, 0.14);
+        --text: #111318;
+        --text2: #555a66;
+        --text3: #909099;
+        --accent: #008f55;
+        --red: #c92020;
+        --amber: #9a6200;
+        --header-bg: rgba(244, 245, 247, 0.95);
+        --grid-line: rgba(0, 0, 0, 0.03);
+      }
+
+      html {
+        font-size: 14px;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* Grid lines bg */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .wrap {
+        position: relative;
+        z-index: 1;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ── Header ── */
+      header {
+        border-bottom: 1px solid var(--border);
+        padding: 0 24px;
+        position: sticky;
+        top: 0;
+        background: var(--header-bg);
+        backdrop-filter: blur(12px);
+        z-index: 100;
+      }
+      .header-inner {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        height: 56px;
+        gap: 24px;
+      }
+      .logo {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logo-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.6;
+          transform: scale(0.85);
+        }
+      }
+      .header-spacer {
+        flex: 1;
+      }
+      .status-pill {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text2);
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 4px 12px;
+      }
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--text3);
+      }
+      .status-dot.live {
+        background: var(--accent);
+        box-shadow: 0 0 6px var(--accent);
+      }
+      .status-dot.scanning {
+        background: var(--amber);
+        animation: pulse 1s ease-in-out infinite;
+      }
+      .status-dot.error {
+        background: var(--red);
+      }
+      .btn-scan {
+        background: var(--accent);
+        color: #000;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 16px;
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: all 0.15s;
+      }
+      .btn-scan:hover {
+        background: #00ffc0;
+      }
+      .btn-scan:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .ts {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+      }
+
+      /* ── Main ── */
+      main {
+        padding: 32px 24px 64px;
+      }
+      .main-inner {
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+
+      /* ── Empty state ── */
+      .empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        text-align: center;
+        gap: 16px;
+      }
+      .empty-icon {
+        width: 64px;
+        height: 64px;
+        border: 1px solid var(--border2);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+      }
+      .empty h2 {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .empty p {
+        font-size: 13px;
+        color: var(--text2);
+        max-width: 420px;
+        line-height: 1.6;
+      }
+      .code-block {
+        background: var(--bg3);
+        border: 1px solid var(--border2);
+        border-radius: 8px;
+        padding: 14px 20px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--accent);
+        text-align: left;
+        max-width: 500px;
+        width: 100%;
+      }
+      .code-block span {
+        color: var(--text2);
+      }
+
+      /* ── Scanning state ── */
+      .scanning-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        gap: 16px;
+      }
+      .scan-ring {
+        width: 56px;
+        height: 56px;
+        border: 2px solid var(--border2);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ── Tabs ── */
+      .tabs {
+        display: flex;
+        gap: 2px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 28px;
+      }
+      .tab {
+        padding: 10px 20px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--text3);
+        cursor: pointer;
+        border: none;
+        background: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: all 0.15s;
+        font-family: var(--sans);
+      }
+      .tab:hover {
+        color: var(--text2);
+      }
+      .tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+
+      /* ── Summary cards ── */
+      .summary-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .scard {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        transition: border-color 0.15s;
+      }
+      .scard:hover {
+        border-color: var(--border2);
+      }
+      .scard-label {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text3);
+        margin-bottom: 8px;
+      }
+      .scard-val {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .scard-sub {
+        font-size: 11px;
+        color: var(--text2);
+        margin-top: 4px;
+        font-family: var(--mono);
+      }
+      .scard-val.pos {
+        color: var(--accent);
+      }
+      .scard-val.neg {
+        color: var(--red);
+      }
+
+      /* ── Tables ── */
+      .table-wrap {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 20px;
+      }
+      .table-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .table-title {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text2);
+      }
+      .table-meta {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead th {
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text3);
+        padding: 10px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      thead th.r {
+        text-align: right;
+      }
+      tbody tr {
+        border-bottom: 1px solid var(--border);
+        transition: background 0.1s;
+        cursor: pointer;
+      }
+      tbody tr:last-child {
+        border-bottom: none;
+      }
+      tbody tr:hover {
+        background: var(--bg3);
+      }
+      tbody tr.selected {
+        background: rgba(0, 229, 160, 0.04);
+      }
+      tbody td {
+        padding: 12px 16px;
+        font-size: 13px;
+        color: var(--text);
+        vertical-align: middle;
+      }
+      tbody td.r {
+        text-align: right;
+      }
+      tbody td.mono {
+        font-family: var(--mono);
+      }
+      .rank {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+        width: 28px;
+      }
+      .row-name {
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .row-sub {
+        font-size: 11px;
+        color: var(--text2);
+        margin-top: 2px;
+      }
+      .ticker-chip {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+        background: var(--bg4);
+        border: 1px solid var(--border2);
+        border-radius: 4px;
+        padding: 2px 7px;
+        color: var(--accent);
+      }
+
+      /* perf cells */
+      .pos {
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .neg {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .neu {
+        color: var(--text3);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      /* bar */
+      .bar-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .bar-track {
+        width: 72px;
+        height: 3px;
+        background: var(--bg4);
+        border-radius: 2px;
+        overflow: hidden;
+        position: relative;
+      }
+      .bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        position: absolute;
+        transition: width 0.4s ease;
+      }
+      .bar-pos {
+        background: var(--accent);
+        left: 0;
+      }
+      .bar-neg {
+        background: var(--red);
+        right: 0;
+      }
+
+      /* signal badge */
+      .sig {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+      }
+      .sig-buy {
+        background: rgba(0, 180, 100, 0.1);
+        color: var(--accent);
+        border: 1px solid rgba(0, 180, 100, 0.25);
+      }
+      .sig-watch {
+        background: rgba(200, 140, 0, 0.1);
+        color: var(--amber);
+        border: 1px solid rgba(200, 140, 0, 0.25);
+      }
+      .sig-avoid {
+        background: rgba(200, 50, 50, 0.1);
+        color: var(--red);
+        border: 1px solid rgba(200, 50, 50, 0.25);
+      }
+
+      /* sector tag */
+      .sec-tag {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text3);
+        background: var(--bg4);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 2px 6px;
+      }
+
+      /* ── Drill panel ── */
+      .drill-panel {
+        background: var(--bg3);
+        border: 1px solid var(--border2);
+        border-radius: 10px;
+        margin-top: 12px;
+        overflow: hidden;
+        animation: slideDown 0.2s ease;
+      }
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .drill-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text2);
+      }
+      .drill-arrow {
+        color: var(--accent);
+      }
+
+      /* ── Insight cards ── */
+      .insight-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .icard {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px 20px;
+      }
+      .icard-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .icard-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+      .icard-icon.red {
+        background: rgba(255, 77, 77, 0.12);
+      }
+      .icard-icon.amber {
+        background: rgba(240, 160, 32, 0.12);
+      }
+      .icard-title {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .icard-items {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .icard-item {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        font-size: 12px;
+        color: var(--text2);
+        line-height: 1.5;
+      }
+      .iitem-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin-top: 5px;
+        flex-shrink: 0;
+      }
+
+      /* ── Error state ── */
+      .error-bar {
+        background: rgba(255, 77, 77, 0.08);
+        border: 1px solid rgba(255, 77, 77, 0.25);
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 12px;
+        color: var(--red);
+        font-family: var(--mono);
+        margin-bottom: 20px;
+      }
+
+      /* ── Animations ── */
+      .fade-in {
+        animation: fadeIn 0.3s ease;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .stagger > * {
+        animation: fadeIn 0.3s ease both;
+      }
+      .stagger > *:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .stagger > *:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .stagger > *:nth-child(3) {
+        animation-delay: 0.15s;
+      }
+      .stagger > *:nth-child(4) {
+        animation-delay: 0.2s;
+      }
+
+      .theme-btn {
+        background: none;
+        border: 1px solid var(--border2);
+        border-radius: 6px;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--text2);
+        transition: all 0.15s;
+        line-height: 1;
+      }
+      .theme-btn:hover {
+        background: var(--bg3);
+        color: var(--text);
+      }
+
+      .export-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: 1px solid var(--border2);
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text2);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .export-btn:hover {
+        background: var(--bg3);
+        color: var(--text);
+        border-color: var(--accent);
+      }
+      .export-btn svg {
+        width: 13px;
+        height: 13px;
+      }
+
+      /* ── Export modal ── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.15s ease;
+      }
+      :root.light .modal-overlay {
+        background: rgba(0, 0, 0, 0.35);
+      }
+      .modal {
+        background: var(--bg2);
+        border: 1px solid var(--border2);
+        border-radius: 14px;
+        width: 480px;
+        max-width: calc(100vw - 32px);
+        overflow: hidden;
+        animation: slideDown 0.2s ease;
+      }
+      .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .modal-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 18px;
+        color: var(--text3);
+        line-height: 1;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .modal-close:hover {
+        background: var(--bg3);
+        color: var(--text);
+      }
+      .modal-body {
+        padding: 20px;
+      }
+      .modal-sub {
+        font-size: 12px;
+        color: var(--text2);
+        margin-bottom: 14px;
+        line-height: 1.5;
+      }
+      .watchlist-options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .wl-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.12s;
+        background: var(--bg3);
+      }
+      .wl-option:hover {
+        border-color: var(--accent);
+        background: var(--bg4);
+      }
+      .wl-option.selected {
+        border-color: var(--accent);
+        background: var(--bg4);
+      }
+      .wl-option input[type="checkbox"] {
+        accent-color: var(--accent);
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+      }
+      .wl-option-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+      }
+      .wl-option-sub {
+        font-size: 11px;
+        color: var(--text2);
+        margin-top: 1px;
+      }
+      .wl-count {
+        margin-left: auto;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+      }
+      .tv-format-box {
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent);
+        word-break: break-all;
+        line-height: 1.6;
+        max-height: 80px;
+        overflow-y: auto;
+        margin-bottom: 14px;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .btn-primary {
+        flex: 1;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 7px;
+        padding: 9px 16px;
+        font-family: var(--sans);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.15s;
+      }
+      :root.light .btn-primary {
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.85;
+      }
+      .btn-secondary {
+        background: none;
+        border: 1px solid var(--border2);
+        border-radius: 7px;
+        padding: 9px 16px;
+        font-family: var(--sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text2);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .btn-secondary:hover {
+        background: var(--bg3);
+        color: var(--text);
+      }
+      .copy-confirm {
+        font-size: 11px;
+        color: var(--accent);
+        text-align: center;
+        margin-top: 8px;
+        height: 16px;
+        transition: opacity 0.3s;
+      }
+
+      /* etf chip — shown in sector/industry drill rows */
+      .etf-chip {
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 500;
+        background: var(--bg4);
+        border: 1px solid var(--border2);
+        border-radius: 3px;
+        padding: 1px 5px;
+        color: var(--text3);
+        margin-left: 6px;
+        vertical-align: middle;
+      }
+      :root.light .etf-chip {
+        color: var(--text2);
+      }
+
+      /* ── Emerging leaders ── */
+      .tab-emerging.active {
+        color: #a060f0;
+        border-bottom-color: #a060f0;
+      }
+      .emerging-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      .ecard {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 18px;
+        transition: border-color 0.15s, transform 0.15s;
+        position: relative;
+        overflow: hidden;
+      }
+      .ecard::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+      }
+      .ecard.sig-strong::before {
+        background: linear-gradient(90deg, #a060f0, #00c97a);
+      }
+      .ecard.sig-building::before {
+        background: linear-gradient(90deg, #a060f0, var(--amber));
+      }
+      .ecard.sig-watch::before {
+        background: var(--border2);
+      }
+      .ecard:hover {
+        border-color: var(--border2);
+        transform: translateY(-1px);
+      }
+      .ecard-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .ecard-ticker {
+        font-family: var(--mono);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .ecard-name {
+        font-size: 11px;
+        color: var(--text2);
+        margin-top: 2px;
+      }
+      .ecard-sig {
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 3px 9px;
+        border-radius: 4px;
+      }
+      .ecard-sig.strong {
+        background: rgba(160, 96, 240, 0.15);
+        color: #a060f0;
+        border: 1px solid rgba(160, 96, 240, 0.3);
+      }
+      .ecard-sig.building {
+        background: rgba(200, 140, 0, 0.12);
+        color: var(--amber);
+        border: 1px solid rgba(200, 140, 0, 0.25);
+      }
+      .ecard-sig.watch {
+        background: var(--bg4);
+        color: var(--text3);
+        border: 1px solid var(--border);
+      }
+      .ecard-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .emet {
+        text-align: center;
+      }
+      .emet-val {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .emet-label {
+        font-size: 10px;
+        color: var(--text3);
+        margin-top: 2px;
+        letter-spacing: 0.04em;
+      }
+      .ecard-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .ecard-tags {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+      .etag {
+        font-size: 10px;
+        font-family: var(--mono);
+        color: var(--text3);
+        background: var(--bg4);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 1px 6px;
+      }
+      .accel-bar {
+        height: 3px;
+        border-radius: 2px;
+        background: var(--bg4);
+        margin-top: 10px;
+        overflow: hidden;
+      }
+      .accel-fill {
+        height: 100%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #a060f0, #00c97a);
+        transition: width 0.5s ease;
+      }
+      .emerging-legend {
+        display: flex;
+        gap: 20px;
+        font-size: 11px;
+        color: var(--text3);
+        margin-bottom: 16px;
+        padding: 10px 14px;
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      /* ── Ticker links ── */
+      a.ticker-chip {
+        text-decoration: none;
+        cursor: pointer;
+      }
+      a.ticker-chip:hover {
+        background: rgba(0, 201, 122, 0.15);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      a.ecard-ticker {
+        text-decoration: none;
+        color: var(--text);
+      }
+      a.ecard-ticker:hover {
+        color: var(--accent);
+      }
+
+      /* ── Breakouts tab ── */
+      .tab-breakouts { color: #36b5f5 !important; }
+      .tab-breakouts.active { border-bottom-color: #36b5f5 !important; }
+      .pct-high {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .pct-high.near  { color: var(--accent); }
+      .pct-high.close { color: var(--amber); }
+      .pct-high.basing { color: var(--text2); }
+
+      /* ── Cap display ── */
+      .cap {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text2);
+      }
+
+      /* ── Responsive ── */
+      @media (max-width: 900px) {
+        .summary-row {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .insight-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 600px) {
+        .summary-row {
+          grid-template-columns: 1fr 1fr;
+        }
+        main {
+          padding: 20px 12px 48px;
+        }
+        header {
+          padding: 0 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-dot" id="logo-dot"></div>
+          Market Scanner
+        </div>
+        <div class="header-spacer"></div>
+        <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode">☀︎</button>
+        <div class="status-pill">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">Waiting for data</span>
+        </div>
+        <span class="ts" id="ts-display" style="display: none"></span>
+      </div>
+    </header>
+
+    <main>
+      <div class="main-inner">
+        <div id="app"></div>
+      </div>
+    </main>
+
+    <script>
+      const API = "/api/data";
+      let state = { data: null, scanning: false, error: null, lastUpdated: null };
+      let activeTab = "sectors";
+      let selectedSector = null;
+      let pollInterval = null;
+
+      // ─── Theme ────────────────────────────────────────────────────────────────────
+
+      const savedTheme = localStorage.getItem("theme") || "dark";
+      if (savedTheme === "light") document.documentElement.classList.add("light");
+
+      function toggleTheme() {
+        const isLight = document.documentElement.classList.toggle("light");
+        localStorage.setItem("theme", isLight ? "light" : "dark");
+        document.getElementById("theme-btn").textContent = isLight ? "☽" : "☀︎";
+      }
+      // Set initial icon
+      document.getElementById("theme-btn").textContent = savedTheme === "light" ? "☽" : "☀︎";
+
+      // ─── ETF tickers ─────────────────────────────────────────────────────────────
+      // Sector ETFs (SPDR Select Sector series + common alternatives)
+      const SECTOR_ETFS = {
+        Technology: "XLK",
+        "Information Technology": "XLK",
+        "Communication Services": "XLC",
+        "Consumer Discretionary": "XLY",
+        "Consumer Staples": "XLP",
+        Energy: "XLE",
+        Financials: "XLF",
+        "Health Care": "XLV",
+        Healthcare: "XLV",
+        Industrials: "XLI",
+        Materials: "XLB",
+        "Real Estate": "XLRE",
+        Utilities: "XLU",
+      };
+
+      // Industry ETFs — common ones
+      const INDUSTRY_ETFS = {
+        Semiconductors: "SOXX",
+        Semiconductor: "SOXX",
+        Biotechnology: "XBI",
+        Banks: "KBE",
+        "Regional Banks": "KRE",
+        "Oil & Gas Exploration & Production": "XOP",
+        "Oil & Gas Exploration": "XOP",
+        "Oil & Gas Equipment & Services": "OIH",
+        "Oil & Gas Equipment": "OIH",
+        "Aerospace & Defense": "ITA",
+        Defense: "ITA",
+        Software: "IGV",
+        Internet: "PNQI",
+        Retail: "XRT",
+        Pharmaceuticals: "XPH",
+        "Medical Devices": "IHI",
+        Insurance: "KIE",
+        Homebuilders: "XHB",
+        Gold: "GDX",
+        "Gold Mining": "GDX",
+        Silver: "SIL",
+        Uranium: "URA",
+        "Clean Energy": "ICLN",
+        Solar: "TAN",
+        "Electric Vehicles": "DRIV",
+        "Cloud Computing": "CLOU",
+        Cybersecurity: "HACK",
+        "Artificial Intelligence": "AIQ",
+        Robotics: "ROBO",
+        Copper: "COPX",
+        Steel: "SLX",
+        Airlines: "JETS",
+        Transportation: "IYT",
+        "Real Estate": "VNQ",
+        REITs: "VNQ",
+      };
+
+      function tickerChip(ticker) {
+        return `<a href="https://www.tradingview.com/chart/?symbol=${encodeURIComponent(ticker)}" target="_blank" rel="noopener" class="ticker-chip" onclick="event.stopPropagation()">${ticker}</a>`;
+      }
+
+      function rsCell(v) {
+        if (v == null) return '<span class="neu">—</span>';
+        const cls = v > 0 ? "pos" : v < 0 ? "neg" : "neu";
+        return `<span class="${cls}" title="vs SPY (3M)">${v > 0 ? "+" : ""}${v.toFixed(2)}%</span>`;
+      }
+
+      function etfChip(name, map) {
+        if (!name) return "";
+        // Try exact match first, then partial
+        const ticker =
+          map[name] ||
+          Object.keys(map).find(
+            (k) =>
+              name.toLowerCase().includes(k.toLowerCase()) ||
+              k.toLowerCase().includes(name.toLowerCase().split(" ").slice(0, 2).join(" "))
+          );
+        if (!ticker && !map[name]) return "";
+        const t = map[name] || ticker;
+        return t ? `<span class="etf-chip">${t}</span>` : "";
+      }
+
+      // ─── Polling ──────────────────────────────────────────────────────────────────
+
+      async function poll() {
+        try {
+          const res = await fetch(API);
+          const json = await res.json();
+
+          const changed = JSON.stringify(json) !== JSON.stringify(state);
+          state = { ...json };
+
+          if (changed) render();
+          updateHeader();
+        } catch (e) {
+          console.error("Poll error:", e);
+        }
+      }
+
+      function startPolling() {
+        poll();
+        pollInterval = setInterval(poll, 3000);
+      }
+
+      // ─── Header ───────────────────────────────────────────────────────────────────
+
+      function updateHeader() {
+        const dot = document.getElementById("status-dot");
+        const txt = document.getElementById("status-text");
+        const ts = document.getElementById("ts-display");
+
+        dot.className = "status-dot";
+
+        if (state.scanning) {
+          dot.classList.add("scanning");
+          txt.textContent = "Scanning...";
+        } else if (state.error) {
+          dot.classList.add("error");
+          txt.textContent = "Error";
+        } else if (state.data) {
+          dot.classList.add("live");
+          txt.textContent = "Live";
+          if (state.lastUpdated) {
+            ts.style.display = "block";
+            ts.textContent = "Updated " + new Date(state.lastUpdated).toLocaleTimeString();
+          }
+        } else {
+          txt.textContent = "Waiting for data";
+        }
+      }
+
+      // ─── Render ───────────────────────────────────────────────────────────────────
+
+      function render() {
+        const app = document.getElementById("app");
+
+        if (state.scanning && !state.data) {
+          app.innerHTML = renderScanning();
+          return;
+        }
+
+        if (!state.data && !state.scanning) {
+          app.innerHTML = renderEmpty();
+          return;
+        }
+
+        if (state.data) {
+          app.innerHTML = renderDashboard();
+          bindEvents();
+        }
+      }
+
+      // ─── Empty ────────────────────────────────────────────────────────────────────
+
+      function renderEmpty() {
+        return `
+    <div class="empty fade-in">
+      <div class="empty-icon">📡</div>
+      <h2>Waiting for scan data</h2>
+      <p>Run your market-scanner.js script to start. Make sure it's configured to POST results to this server.</p>
+      <div class="code-block">
+        <span># Add to your market-scanner.js:</span><br>
+        POST http://localhost:3000/api/scan<br><br>
+        <span># Or run with:</span><br>
+        node market-scanner.js
+      </div>
+      <p style="font-size:12px;color:var(--text3);">Auto-refreshes every 3 seconds</p>
+    </div>
+  `;
+      }
+
+      function renderScanning() {
+        return `
+    <div class="scanning-state fade-in">
+      <div class="scan-ring"></div>
+      <p style="color:var(--text2);font-size:13px;">Scanning markets...</p>
+      <p style="color:var(--text3);font-size:11px;font-family:var(--mono);">Fetching sector → industry → stock data</p>
+    </div>
+  `;
+      }
+
+      // ─── Dashboard ────────────────────────────────────────────────────────────────
+
+      function renderDashboard() {
+        const d = state.data;
+        const sectors = d.sectors || [];
+        const industries = d.industries || [];
+        const stocks = d.stocks || [];
+
+        const topSector = sectors[0];
+        const topIndustry = industries[0] || null;
+        const topStock = stocks[0] || null;
+
+        return `
+    ${state.error ? `<div class="error-bar">⚠ Last scan error: ${state.error}</div>` : ""}
+
+    <div class="summary-row stagger">
+      <div class="scard">
+        <div class="scard-label">Top sector</div>
+        <div class="scard-val pos">${topSector ? topSector.name : "—"}</div>
+        <div class="scard-sub">${topSector ? fmt(topSector.perf3M) + " (3M)" : ""}</div>
+      </div>
+      <div class="scard">
+        <div class="scard-label">Top industry</div>
+        <div class="scard-val" style="font-size:16px;">${topIndustry ? topIndustry.name : "—"}</div>
+        <div class="scard-sub">${topIndustry ? fmt(topIndustry.perf3M) + " (3M)" : ""}</div>
+      </div>
+      <div class="scard">
+        <div class="scard-label">Top stock</div>
+        <div class="scard-val" style="font-size:18px;">${topStock ? topStock.ticker : "—"}</div>
+        <div class="scard-sub">${topStock ? topStock.description + " · " + fmt(topStock.perf3M) : ""}</div>
+      </div>
+      <div class="scard">
+        <div class="scard-label">SPY benchmark (3M)</div>
+        <div class="scard-val ${d.spy && d.spy.perf3M >= 0 ? 'pos' : 'neg'}" style="font-size:18px;">${d.spy ? fmt(d.spy.perf3M) : sectors.length + ' sectors'}</div>
+        <div class="scard-sub">${d.spy ? fmt(d.spy.perf1M) + ' (1M) · ' + fmt(d.spy.perfW) + ' (1W)' : industries.length + ' industries · ' + stocks.length + ' stocks'}</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab ${activeTab === "sectors" ? "active" : ""}" onclick="switchTab('sectors')">Sectors</button>
+      <button class="tab ${
+        activeTab === "industries" ? "active" : ""
+      }" onclick="switchTab('industries')">Industries</button>
+      <button class="tab ${activeTab === "stocks" ? "active" : ""}" onclick="switchTab('stocks')">Stocks</button>
+      <button class="tab tab-breakouts ${activeTab === "breakouts" ? "active" : ""}" onclick="switchTab('breakouts')">🎯 Breakouts</button>
+      <button class="tab ${activeTab === "emerging" ? "active" : ""}" onclick="switchTab('emerging')" style="color:${
+          activeTab === "emerging" ? "var(--accent)" : "#a060f0"
+        };">⚡ Emerging</button>
+    </div>
+
+    <div id="tab-content">
+      ${activeTab === "sectors" ? renderSectorsTab(sectors, industries) : ""}
+      ${activeTab === "industries" ? renderIndustriesTab(industries) : ""}
+      ${activeTab === "stocks" ? renderStocksTab(stocks) : ""}
+      ${activeTab === "breakouts" ? renderBreakoutsTab(d.breakouts || [], d.spy) : ""}
+      ${activeTab === "emerging" ? renderEmergingTab(d.emerging || []) : ""}
+    </div>
+  `;
+      }
+
+      // ─── Sectors tab ──────────────────────────────────────────────────────────────
+
+      function renderSectorsTab(sectors, industries) {
+        const maxPerf = Math.max(...sectors.map((s) => Math.abs(s.perf3M || 0)), 1);
+
+        const rows = sectors
+          .map((s, i) => {
+            const isSel = selectedSector === s.name;
+            return `
+      <tr class="${isSel ? "selected" : ""}" onclick="toggleDrill('${s.name}')">
+        <td class="rank">${String(i + 1).padStart(2, "0")}</td>
+        <td>
+          <div class="row-name">${s.name}${etfChip(s.name, SECTOR_ETFS)}</div>
+          ${s.driver ? `<div class="row-sub">${s.driver}</div>` : ""}
+        </td>
+        <td class="r">${perfCell(s.perfW)}</td>
+        <td class="r">${perfCell(s.perf1M)}</td>
+        <td class="r">${perfCell(s.perf3M)}</td>
+        <td class="r">${signal(s)}</td>
+        <td class="r">
+          <div class="bar-cell">
+            ${barCell(s.perf3M, maxPerf)}
+          </div>
+        </td>
+      </tr>
+      ${
+        isSel && industries.filter((ind) => ind.sector === s.name).length > 0
+          ? `
+        <tr>
+          <td colspan="7" style="padding:0;">
+            <div class="drill-panel">
+              <div class="drill-header">
+                <span class="drill-arrow">▸</span>
+                ${s.name} — top industries
+              </div>
+              <table>
+                <thead><tr>
+                  <th style="width:28px;">#</th>
+                  <th>Industry</th>
+                  <th class="r">1W</th>
+                  <th class="r">1M</th>
+                  <th class="r">3M</th>
+                  <th class="r">Signal</th>
+                </tr></thead>
+                <tbody>
+                  ${industries
+                    .filter((ind) => ind.sector === s.name)
+                    .map(
+                      (ind, j) => `
+                      <tr>
+                        <td class="rank">${j + 1}</td>
+                        <td class="row-name">${ind.name}${etfChip(ind.name, INDUSTRY_ETFS)}</td>
+                        <td class="r">${perfCell(ind.perfW)}</td>
+                        <td class="r">${perfCell(ind.perf1M)}</td>
+                        <td class="r">${perfCell(ind.perf3M)}</td>
+                        <td class="r">${signal(ind)}</td>
+                      </tr>
+                    `
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      `
+          : isSel
+          ? `
+        <tr><td colspan="7" style="padding:0;">
+          <div class="drill-panel">
+            <div class="drill-header"><span class="drill-arrow">▸</span>${s.name} — no industry data yet</div>
+          </div>
+        </td></tr>
+      `
+          : ""
+      }
+    `;
+          })
+          .join("");
+
+        return `
+    <div class="table-wrap fade-in">
+      <div class="table-header">
+        <span class="table-title">Sector performance</span>
+        <span class="table-meta">Click to drill into industries</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th style="width:28px;">#</th>
+          <th>Sector</th>
+          <th class="r">1W</th>
+          <th class="r">1M</th>
+          <th class="r">3M</th>
+          <th class="r">Signal</th>
+          <th class="r" style="width:120px;">Trend (3M)</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+      }
+
+      // ─── Industries tab ───────────────────────────────────────────────────────────
+
+      function renderIndustriesTab(industries) {
+        if (!industries.length) {
+          return `<div class="empty"><p style="color:var(--text2);">No industry data. Run scanner with industry drill-down enabled.</p></div>`;
+        }
+
+        const sorted = [...industries].sort((a, b) => (b.perf3M || 0) - (a.perf3M || 0));
+
+        const rows = sorted
+          .map(
+            (ind, i) => `
+    <tr>
+      <td class="rank">${String(i + 1).padStart(2, "0")}</td>
+      <td>
+        <div class="row-name">${ind.name}${etfChip(ind.name, INDUSTRY_ETFS)}</div>
+      </td>
+      <td><span class="sec-tag">${ind.sector || "—"}${etfChip(ind.sector, SECTOR_ETFS)}</span></td>
+      <td class="r">${perfCell(ind.perfW)}</td>
+      <td class="r">${perfCell(ind.perf1M)}</td>
+      <td class="r">${perfCell(ind.perf3M)}</td>
+      <td class="r">${signal(ind)}</td>
+    </tr>
+  `
+          )
+          .join("");
+
+        return `
+    <div class="table-wrap fade-in">
+      <div class="table-header">
+        <span class="table-title">All industries — ranked by 3M</span>
+        <span class="table-meta">${industries.length} industries</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>#</th><th>Industry</th><th>Sector</th>
+          <th class="r">1W</th><th class="r">1M</th><th class="r">3M</th><th class="r">Signal</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+      }
+
+      // ─── Stocks tab ───────────────────────────────────────────────────────────────
+
+      function renderStocksTab(stocks) {
+        if (!stocks.length) {
+          return `<div class="empty"><p style="color:var(--text2);">No stock data available.</p></div>`;
+        }
+
+        const sorted = [...stocks].sort((a, b) => (b.perf3M || 0) - (a.perf3M || 0));
+
+        const rows = sorted
+          .map(
+            (s, i) => `
+    <tr>
+      <td>${tickerChip(s.ticker)}</td>
+      <td>
+        <div class="row-name" style="font-size:12px;">${s.description || s.name || "—"}</div>
+        <div class="row-sub">${s.industry || ""}</div>
+      </td>
+      <td><span class="sec-tag">${s.sector || "—"}</span></td>
+      <td class="r">${perfCell(s.perfW)}</td>
+      <td class="r">${perfCell(s.perf1M)}</td>
+      <td class="r">${perfCell(s.perf3M)}</td>
+      <td class="r">${rsCell(s.rs)}</td>
+      <td class="r cap">${fmtCap(s.marketCap)}</td>
+      <td class="r">${
+        s.relVol != null
+          ? `<span class="mono" style="font-size:11px;color:var(--text2);">${parseFloat(s.relVol).toFixed(1)}x</span>`
+          : "—"
+      }</td>
+      <td class="r">${signal(s)}</td>
+    </tr>
+  `
+          )
+          .join("");
+
+        return `
+    <div class="table-wrap fade-in">
+      <div class="table-header">
+        <span class="table-title">Top stocks</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="table-meta">${stocks.length} stocks · >$300M cap</span>
+          <button class="export-btn" onclick="openExportModal()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2 11v2.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V11"/>
+            </svg>
+            Export watchlist
+          </button>
+        </div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Ticker</th><th>Name</th><th>Sector</th>
+          <th class="r">1W</th><th class="r">1M</th><th class="r">3M</th>
+          <th class="r">RS vs SPY</th>
+          <th class="r">Mkt cap</th><th class="r">Rel vol</th><th class="r">Signal</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+      }
+
+      // ─── Emerging leaders tab ─────────────────────────────────────────────────────
+
+      function renderEmergingTab(emerging) {
+        if (!emerging.length) {
+          return `<div class="empty"><p style="color:var(--text2);">No emerging leaders found yet. Run the scanner to populate this tab.</p></div>`;
+        }
+
+        const maxAccel = Math.max(...emerging.map((e) => Math.abs(e.accel || 0)), 1);
+
+        const cards = emerging
+          .map((e) => {
+            const sigClass = e.signal === "strong" ? "strong" : e.signal === "building" ? "building" : "watch";
+            const sigLabel = e.signal === "strong" ? "⚡ Strong" : e.signal === "building" ? "↗ Building" : "◎ Watch";
+            const accelPct = Math.min((Math.abs(e.accel || 0) / maxAccel) * 100, 100).toFixed(0);
+            const rvol = e.relVol != null ? parseFloat(e.relVol).toFixed(1) : "—";
+            const fromHigh = e.pctFromHigh != null ? `${e.pctFromHigh.toFixed(1)}%` : "—";
+
+            return `
+      <div class="ecard sig-${sigClass}">
+        <div class="ecard-top">
+          <div>
+            <a href="https://www.tradingview.com/chart/?symbol=${encodeURIComponent(e.ticker)}" target="_blank" rel="noopener" class="ecard-ticker" onclick="event.stopPropagation()">${e.ticker}</a>
+            <div class="ecard-name">${(e.description || "").slice(0, 28)}</div>
+          </div>
+          <span class="ecard-sig ${sigClass}">${sigLabel}</span>
+        </div>
+
+        <div class="ecard-metrics">
+          <div class="emet">
+            <div class="emet-val ${(e.perfW || 0) >= 0 ? "pos" : "neg"}">${fmt(e.perfW)}</div>
+            <div class="emet-label">1 week</div>
+          </div>
+          <div class="emet">
+            <div class="emet-val ${(e.perf1M || 0) >= 0 ? "pos" : "neg"}">${fmt(e.perf1M)}</div>
+            <div class="emet-label">1 month</div>
+          </div>
+          <div class="emet">
+            <div class="emet-val" style="color:#a060f0;">${rvol}x</div>
+            <div class="emet-label">Rel vol</div>
+          </div>
+        </div>
+
+        <div class="accel-bar">
+          <div class="accel-fill" style="width:${accelPct}%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;font-family:var(--mono);font-size:10px;color:var(--text3);">
+          <span>Momentum accel: <span style="color:${(e.accel || 0) > 0 ? "#a060f0" : "var(--red)"};">${
+              e.accel > 0 ? "+" : ""
+            }${e.accel}</span></span>
+          <span>${fromHigh} from high</span>
+        </div>
+
+        <div class="ecard-footer" style="margin-top:10px;">
+          <div class="ecard-tags">
+            <span class="etag">${e.sector || "—"}</span>
+            ${e.industry ? `<span class="etag">${e.industry.slice(0, 20)}</span>` : ""}
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            ${e.rs != null ? `<span style="font-family:var(--mono);font-size:11px;color:${e.rs >= 0 ? "var(--accent)" : "var(--red)"};" title="Relative strength vs SPY (3M)">${e.rs > 0 ? "+" : ""}${e.rs}% RS</span>` : ""}
+            <span style="font-family:var(--mono);font-size:11px;color:var(--text3);">${fmtCap(e.marketCap)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+          })
+          .join("");
+
+        return `
+    <div class="emerging-legend fade-in">
+      <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(135deg,#a060f0,#00c97a)"></div><strong style="color:var(--text2);">⚡ Strong</strong> — accel &gt;5 + rel vol &gt;1.5x · highest conviction</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div><strong style="color:var(--text2);">↗ Building</strong> — accel &gt;2 · momentum accelerating, start watching</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--text3)"></div><strong style="color:var(--text2);">◎ Watch</strong> — early signals, not confirmed yet</div>
+    </div>
+    <div class="emerging-grid fade-in">${cards}</div>
+  `;
+      }
+
+      // ─── Breakouts tab ────────────────────────────────────────────────────────────
+
+      function renderBreakoutsTab(breakouts, spy) {
+        if (!breakouts.length) {
+          return `<div class="empty"><p style="color:var(--text2);">No breakout candidates found. Run the scanner to populate this tab.</p></div>`;
+        }
+
+        const rows = breakouts.map((s, i) => {
+          const nearClass = s.pctFromHigh <= 1 ? "near" : s.pctFromHigh <= 3 ? "close" : "basing";
+          return `
+    <tr>
+      <td class="rank">${String(i + 1).padStart(2, "0")}</td>
+      <td>${tickerChip(s.ticker)}</td>
+      <td>
+        <div class="row-name" style="font-size:12px;">${s.description || "—"}</div>
+        <div class="row-sub">${s.industry || ""}</div>
+      </td>
+      <td><span class="sec-tag">${s.sector || "—"}</span></td>
+      <td class="r"><span class="pct-high ${nearClass}">${s.pctFromHigh.toFixed(1)}%</span></td>
+      <td class="r">${perfCell(s.perfW)}</td>
+      <td class="r">${perfCell(s.perf1M)}</td>
+      <td class="r">${perfCell(s.perf3M)}</td>
+      <td class="r">${rsCell(s.rs)}</td>
+      <td class="r">${s.relVol != null ? `<span class="mono" style="font-size:11px;color:var(--text2);">${parseFloat(s.relVol).toFixed(1)}x</span>` : "—"}</td>
+      <td class="r">${s.rsi != null ? `<span style="font-family:var(--mono);font-size:11px;color:${s.rsi > 70 ? "var(--amber)" : s.rsi < 40 ? "var(--accent)" : "var(--text2)"};">${Math.round(s.rsi)}</span>` : "—"}</td>
+      <td class="r cap">${fmtCap(s.marketCap)}</td>
+    </tr>`;
+        }).join("");
+
+        const spyRef = spy ? ` · SPY 3M: ${fmt(spy.perf3M)}` : "";
+
+        return `
+  <div class="table-wrap fade-in">
+    <div class="table-header">
+      <span class="table-title">Breakout candidates — near 52W high</span>
+      <span class="table-meta">${breakouts.length} stocks · 0–5% from high${spyRef}</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Ticker</th><th>Name</th><th>Sector</th>
+        <th class="r">From High</th>
+        <th class="r">1W</th><th class="r">1M</th><th class="r">3M</th>
+        <th class="r">RS vs SPY</th>
+        <th class="r">Rel vol</th><th class="r">RSI</th><th class="r">Mkt cap</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+      }
+
+      function fmt(v) {
+        if (v == null) return "—";
+        return (v > 0 ? "+" : "") + parseFloat(v).toFixed(2) + "%";
+      }
+
+      function perfCell(v) {
+        if (v == null) return '<span class="neu">—</span>';
+        const cls = v > 0 ? "pos" : v < 0 ? "neg" : "neu";
+        return `<span class="${cls}">${fmt(v)}</span>`;
+      }
+
+      function barCell(v, max) {
+        if (v == null) return "";
+        const pct = Math.min((Math.abs(v) / max) * 100, 100).toFixed(0);
+        const cls = v >= 0 ? "bar-pos" : "bar-neg";
+        return `<div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>`;
+      }
+
+      function signal(item) {
+        const score = (item.perf3M || 0) * 0.45 + (item.perf1M || 0) * 0.35 + (item.perfW || 0) * 0.2;
+        if (item.signal) {
+          const map = { buy: "sig-buy", watch: "sig-watch", avoid: "sig-avoid" };
+          return `<span class="sig ${map[item.signal] || "sig-watch"}">${item.signal}</span>`;
+        }
+        if (score > 5) return `<span class="sig sig-buy">buy</span>`;
+        if (score > 0) return `<span class="sig sig-watch">watch</span>`;
+        return `<span class="sig sig-avoid">avoid</span>`;
+      }
+
+      function fmtCap(v) {
+        if (!v) return "—";
+        if (v >= 1e12) return "$" + (v / 1e12).toFixed(1) + "T";
+        if (v >= 1e9) return "$" + (v / 1e9).toFixed(1) + "B";
+        if (v >= 1e6) return "$" + (v / 1e6).toFixed(1) + "M";
+        return "$" + v;
+      }
+
+      // ─── Export watchlist ─────────────────────────────────────────────────────────
+
+      function openExportModal() {
+        if (!state.data) return;
+
+        const stocks = state.data.stocks || [];
+        const sectors = state.data.sectors || [];
+        const industries = state.data.industries || [];
+
+        // Gather ETF tickers for sectors and industries
+        const sectorEtfs = sectors.map((s) => SECTOR_ETFS[s.name]).filter(Boolean);
+        const industryEtfs = [
+          ...new Set(
+            industries
+              .map(
+                (i) =>
+                  INDUSTRY_ETFS[i.name] ||
+                  (Object.keys(INDUSTRY_ETFS).find((k) => i.name.toLowerCase().includes(k.toLowerCase())) &&
+                    INDUSTRY_ETFS[
+                      Object.keys(INDUSTRY_ETFS).find((k) => i.name.toLowerCase().includes(k.toLowerCase()))
+                    ])
+              )
+              .filter(Boolean)
+          ),
+        ];
+        const stockTickers = [...new Set(stocks.map((s) => s.ticker).filter(Boolean))];
+        const breakoutTickers = [...new Set((state.data.breakouts || []).map((s) => s.ticker).filter(Boolean))];
+
+        // Pre-check all
+        const counts = {
+          stocks: stockTickers.length,
+          breakouts: breakoutTickers.length,
+          sectorEtfs: sectorEtfs.length,
+          industryEtfs: industryEtfs.length,
+        };
+
+        const modalHtml = `
+    <div class="modal-overlay" id="export-modal" onclick="closeModalIfBg(event)">
+      <div class="modal">
+        <div class="modal-head">
+          <span class="modal-title">Export TradingView watchlist</span>
+          <button class="modal-close" onclick="closeExportModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-sub">Select what to include. TradingView accepts a comma-separated ticker list — paste it directly into a new watchlist.</p>
+          <div class="watchlist-options">
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-stocks" checked onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Top stocks</div>
+                <div class="wl-option-sub">Individual equities from scanner results</div>
+              </div>
+              <span class="wl-count">${counts.stocks} tickers</span>
+            </label>
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-breakouts" checked onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Breakout candidates</div>
+                <div class="wl-option-sub">Stocks within 5% of 52-week high with elevated volume</div>
+              </div>
+              <span class="wl-count">${counts.breakouts} tickers</span>
+            </label>
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-sector-etfs" checked onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Sector ETFs</div>
+                <div class="wl-option-sub">SPDR Select Sector series (XLK, XLE, XLF…)</div>
+              </div>
+              <span class="wl-count">${counts.sectorEtfs} ETFs</span>
+            </label>
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-industry-etfs" onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Industry ETFs</div>
+                <div class="wl-option-sub">Thematic ETFs for top industries (SOXX, ITA, XOP…)</div>
+              </div>
+              <span class="wl-count">${counts.industryEtfs} ETFs</span>
+            </label>
+          </div>
+          <div class="tv-format-box" id="wl-preview">Loading...</div>
+          <div class="modal-actions">
+            <button class="btn-primary" onclick="copyWatchlist()">Copy to clipboard</button>
+            <button class="btn-secondary" onclick="downloadWatchlist()">Download .txt</button>
+          </div>
+          <div class="copy-confirm" id="copy-confirm"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+        document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+        // Store data for preview updates
+        window._wlData = { stockTickers, breakoutTickers, sectorEtfs, industryEtfs };
+        updatePreview();
+      }
+
+      function getWatchlistTickers() {
+        const { stockTickers, breakoutTickers, sectorEtfs, industryEtfs } = window._wlData || {};
+        const tickers = [];
+        if (document.getElementById("wl-stocks")?.checked) tickers.push(...(stockTickers || []));
+        if (document.getElementById("wl-breakouts")?.checked) tickers.push(...(breakoutTickers || []));
+        if (document.getElementById("wl-sector-etfs")?.checked) tickers.push(...(sectorEtfs || []));
+        if (document.getElementById("wl-industry-etfs")?.checked) tickers.push(...(industryEtfs || []));
+        return [...new Set(tickers)];
+      }
+
+      function updatePreview() {
+        const preview = document.getElementById("wl-preview");
+        if (!preview) return;
+        const tickers = getWatchlistTickers();
+        preview.textContent = tickers.length ? tickers.join(",") : "— nothing selected —";
+      }
+
+      function copyWatchlist() {
+        const tickers = getWatchlistTickers();
+        if (!tickers.length) return;
+        navigator.clipboard.writeText(tickers.join(",")).then(() => {
+          const el = document.getElementById("copy-confirm");
+          if (el) {
+            el.textContent = `✓ Copied ${tickers.length} tickers to clipboard`;
+            setTimeout(() => {
+              if (el) el.textContent = "";
+            }, 2500);
+          }
+        });
+      }
+
+      function downloadWatchlist() {
+        const tickers = getWatchlistTickers();
+        if (!tickers.length) return;
+        const date = new Date().toISOString().slice(0, 10);
+        const content = tickers.join(",");
+        const blob = new Blob([content], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `scanner-watchlist-${date}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function closeExportModal() {
+        document.getElementById("export-modal")?.remove();
+      }
+
+      function closeModalIfBg(e) {
+        if (e.target.id === "export-modal") closeExportModal();
+      }
+
+      // ─── Events ───────────────────────────────────────────────────────────────────
+
+      function bindEvents() {}
+
+      function switchTab(tab) {
+        activeTab = tab;
+        selectedSector = null;
+        render();
+      }
+
+      function toggleDrill(name) {
+        selectedSector = selectedSector === name ? null : name;
+        // Just re-render the tab content
+        const tc = document.getElementById("tab-content");
+        if (tc) {
+          const d = state.data;
+          tc.innerHTML = renderSectorsTab(d.sectors || [], d.industries || []);
+        }
+      }
+
+      // make these global
+      window.switchTab = switchTab;
+      window.toggleDrill = toggleDrill;
+      window.toggleTheme = toggleTheme;
+      window.openExportModal = openExportModal;
+      window.closeExportModal = closeExportModal;
+      window.closeModalIfBg = closeModalIfBg;
+      window.updatePreview = updatePreview;
+      window.copyWatchlist = copyWatchlist;
+      window.downloadWatchlist = downloadWatchlist;
+
+      // ─── Boot ─────────────────────────────────────────────────────────────────────
+
+      startPolling();
+    </script>
+  </body>
+</html>

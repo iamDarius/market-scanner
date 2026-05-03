@@ -1,0 +1,15 @@
+{
+  "name": "market-scanner-ui",
+  "version": "1.0.0",
+  "description": "Market sector/industry/stock scanner dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "scan": "node market-scanner.js",
+    "scan:watch": "node market-scanner.js --watch 15"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}
