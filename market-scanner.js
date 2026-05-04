@@ -260,6 +260,7 @@ async function getEmergingLeaders(leadingSectorNames, topN = 15) {
     "average_volume_10d_calc",
     "RSI",
     "price_52_week_high",
+    "earnings_release_next_trading_date",
   ];
 
   // TradingView doesn't support string arrays in filters — run one request
@@ -303,6 +304,7 @@ async function getEmergingLeaders(leadingSectorNames, topN = 15) {
         avgVol,
         rsi,
         high52W,
+        earningsTs,
       ] = row.d;
 
       const pctFromHigh = high6M && close ? ((high6M - close) / high6M) * 100 : null;
@@ -311,6 +313,8 @@ async function getEmergingLeaders(leadingSectorNames, topN = 15) {
 
       const emergingScore =
         (perfW || 0) * 1.5 + (perf1M || 0) * 1.2 + (accel || 0) * 2.0 + (relVol || 0) * 5 + proximityScore;
+
+      const daysToEarnings = earningsTs ? Math.round((earningsTs * 1000 - Date.now()) / 86400000) : null;
 
       return {
         ticker,
@@ -327,6 +331,7 @@ async function getEmergingLeaders(leadingSectorNames, topN = 15) {
         accel: accel != null ? parseFloat(accel.toFixed(2)) : null,
         emergingScore: parseFloat(emergingScore.toFixed(1)),
         signal: accel > 5 && relVol > 1.5 ? "strong" : accel > 2 ? "building" : "watch",
+        daysToEarnings: daysToEarnings != null && daysToEarnings >= 0 ? daysToEarnings : null,
       };
     })
     .filter((s) => s.ticker && s.emergingScore > 0)
@@ -348,6 +353,7 @@ async function getBreakoutCandidates(leadingSectorNames, topN = 20) {
     "Perf.W", "Perf.1M", "Perf.3M",
     "price_52_week_high", "close",
     "market_cap_basic", "relative_volume_10d_calc", "RSI",
+    "earnings_release_next_trading_date",
   ];
 
   const allRows = [];
@@ -372,17 +378,19 @@ async function getBreakoutCandidates(leadingSectorNames, topN = 20) {
   const seen = new Set();
   return allRows
     .map((row) => {
-      const [ticker, description, sector, industry, perfW, perf1M, perf3M, high52W, close, marketCap, relVol, rsi] = row.d;
+      const [ticker, description, sector, industry, perfW, perf1M, perf3M, high52W, close, marketCap, relVol, rsi, earningsTs] = row.d;
       if (!ticker || !high52W || !close || high52W <= 0) return null;
       const pctFromHigh = ((high52W - close) / high52W) * 100;
       if (pctFromHigh < 0 || pctFromHigh > 5) return null;
       if (seen.has(ticker)) return null;
       seen.add(ticker);
+      const daysToEarnings = earningsTs ? Math.round((earningsTs * 1000 - Date.now()) / 86400000) : null;
       return {
         ticker, description, sector, industry,
         perfW, perf1M, perf3M, marketCap, relVol, rsi,
         pctFromHigh: parseFloat(pctFromHigh.toFixed(1)),
         high52W, close,
+        daysToEarnings: daysToEarnings != null && daysToEarnings >= 0 ? daysToEarnings : null,
       };
     })
     .filter(Boolean)

@@ -1060,6 +1060,11 @@
       .tab-breakouts { color: #36b5f5 !important; }
       .tab-breakouts.active { border-bottom-color: #36b5f5 !important; }
 
+      /* ── Earnings badge ── */
+      .earn-warn  { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; background: rgba(240,64,64,0.12); color: var(--red); border: 1px solid rgba(240,64,64,0.25); white-space: nowrap; }
+      .earn-caution { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; background: rgba(224,148,24,0.12); color: var(--amber); border: 1px solid rgba(224,148,24,0.25); white-space: nowrap; }
+      .earn-info  { font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 3px; background: var(--bg4); color: var(--text3); border: 1px solid var(--border); white-space: nowrap; }
+
       /* ── Persistent volume tab ── */
       .tab-persistent { color: #f06030 !important; }
       .tab-persistent.active { border-bottom-color: #f06030 !important; }
@@ -1316,6 +1321,14 @@
         if (v == null) return '<span class="neu">—</span>';
         const cls = v > 0 ? "pos" : v < 0 ? "neg" : "neu";
         return `<span class="${cls}" title="vs SPY (3M)">${v > 0 ? "+" : ""}${v.toFixed(2)}%</span>`;
+      }
+
+      function earningsBadge(days) {
+        if (days == null) return "";
+        if (days <= 5)  return `<span class="earn-warn"  title="Earnings in ${days}d — high risk">⚠ ${days}d</span>`;
+        if (days <= 10) return `<span class="earn-caution" title="Earnings in ${days}d">📅 ${days}d</span>`;
+        if (days <= 21) return `<span class="earn-info"  title="Earnings in ${days}d">${days}d</span>`;
+        return "";
       }
 
       function etfChip(name, map) {
@@ -1964,6 +1977,7 @@
             ${e.industry ? `<span class="etag">${e.industry.slice(0, 20)}</span>` : ""}
           </div>
           <div style="display:flex;gap:10px;align-items:center;">
+            ${earningsBadge(e.daysToEarnings)}
             ${e.rs != null ? `<span style="font-family:var(--mono);font-size:11px;color:${e.rs >= 0 ? "var(--accent)" : "var(--red)"};" title="Relative strength vs SPY (3M)">${e.rs > 0 ? "+" : ""}${e.rs}% RS</span>` : ""}
             <span style="font-family:var(--mono);font-size:11px;color:var(--text3);">${fmtCap(e.marketCap)}</span>
           </div>
@@ -2009,6 +2023,7 @@
       <td class="r">${s.relVol != null ? `<span class="mono" style="font-size:11px;color:var(--text2);">${parseFloat(s.relVol).toFixed(1)}x</span>` : "—"}</td>
       <td class="r">${s.rsi != null ? `<span style="font-family:var(--mono);font-size:11px;color:${s.rsi > 70 ? "var(--amber)" : s.rsi < 40 ? "var(--accent)" : "var(--text2)"};">${Math.round(s.rsi)}</span>` : "—"}</td>
       <td class="r cap">${fmtCap(s.marketCap)}</td>
+      <td class="r">${earningsBadge(s.daysToEarnings)}</td>
     </tr>`;
         }).join("");
 
@@ -2026,7 +2041,7 @@
         <th class="r">From High</th>
         <th class="r">1W</th><th class="r">1M</th><th class="r">3M</th>
         <th class="r">RS vs SPY</th>
-        <th class="r">Rel vol</th><th class="r">RSI</th><th class="r">Mkt cap</th>
+        <th class="r">Rel vol</th><th class="r">RSI</th><th class="r">Mkt cap</th><th class="r">Earnings</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
