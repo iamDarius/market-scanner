@@ -1,1 +1,112 @@
-[{"scannedAt":"2026-05-03T11:45:31.287Z","sectors":[{"name":"Electronic Technology","score":18.401322483239184},{"name":"Industrial Services","score":14.31951458927561},{"name":"Health Services","score":13.763021843532895},{"name":"Producer Manufacturing","score":12.315382020592924},{"name":"Retail Trade","score":7.787120552400683},{"name":"Energy Minerals","score":6.909195077967907}]},{"scannedAt":"2026-05-03T11:45:42.169Z","sectors":[{"name":"Electronic Technology","score":18.401322483239184},{"name":"Industrial Services","score":14.31951458927561},{"name":"Health Services","score":13.763021843532895},{"name":"Producer Manufacturing","score":12.315382020592924},{"name":"Retail Trade","score":7.787120552400683},{"name":"Energy Minerals","score":6.909195077967907}]},{"scannedAt":"2026-05-03T12:21:57.037Z","sectors":[{"name":"Electronic Technology","score":18.401322483239184},{"name":"Industrial Services","score":14.31951458927561},{"name":"Health Services","score":13.763021843532895},{"name":"Producer Manufacturing","score":12.315382020592924},{"name":"Retail Trade","score":7.787120552400683},{"name":"Energy Minerals","score":6.909195077967907}]},{"scannedAt":"2026-05-03T12:40:35.200Z","sectors":[{"name":"Electronic Technology","score":18.401322483239184},{"name":"Industrial Services","score":14.31951458927561},{"name":"Health Services","score":13.763021843532895},{"name":"Producer Manufacturing","score":12.315382020592924},{"name":"Retail Trade","score":7.787120552400683},{"name":"Energy Minerals","score":6.909195077967907}]},{"scannedAt":"2026-05-03T12:57:06.513Z","sectors":[{"name":"Electronic Technology","score":18.401322483239184},{"name":"Industrial Services","score":14.31951458927561},{"name":"Health Services","score":13.763021843532895},{"name":"Producer Manufacturing","score":12.315382020592924},{"name":"Retail Trade","score":7.787120552400683},{"name":"Energy Minerals","score":6.909195077967907}]},{"scannedAt":"2026-05-03T13:27:51.375Z","sectors":[{"name":"Electronic Technology","score":18.401322483239184},{"name":"Industrial Services","score":14.31951458927561},{"name":"Health Services","score":13.763021843532895},{"name":"Producer Manufacturing","score":12.315382020592924},{"name":"Retail Trade","score":7.787120552400683},{"name":"Energy Minerals","score":6.909195077967907}]},{"scannedAt":"2026-05-03T23:50:06.028Z","sectors":[{"name":"Technology","score":10}]},{"scannedAt":"2026-05-03T23:50:29.157Z","sectors":[{"name":"Technology","score":10}]}]
+[
+  {
+    "scannedAt": "2026-05-03T22:40:01.544Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  },
+  {
+    "scannedAt": "2026-05-03T22:55:39.047Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  },
+  {
+    "scannedAt": "2026-05-03T23:37:10.318Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  },
+  {
+    "scannedAt": "2026-05-03T23:52:09.480Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  },
+  {
+    "scannedAt": "2026-05-03T23:53:17.319Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  },
+  {
+    "scannedAt": "2026-05-03T23:53:58.920Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  },
+  {
+    "scannedAt": "2026-05-03T23:54:20.664Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  },
+  {
+    "scannedAt": "2026-05-04T00:03:19.833Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  },
+  {
+    "scannedAt": "2026-05-04T00:04:58.927Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  },
+  {
+    "scannedAt": "2026-05-04T00:05:51.547Z",
+    "sectors": [
+      { "name": "Electronic Technology", "score": 18.401322483239184 },
+      { "name": "Industrial Services", "score": 14.31951458927561 },
+      { "name": "Health Services", "score": 13.763021843532895 },
+      { "name": "Producer Manufacturing", "score": 12.315382020592924 },
+      { "name": "Retail Trade", "score": 7.787120552400683 },
+      { "name": "Energy Minerals", "score": 6.909195077967907 }
+    ]
+  }
+]

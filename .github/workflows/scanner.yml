@@ -1,0 +1,26 @@
+name: Market Scanner
+
+on:
+  schedule:
+    # Run every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run market scanner
+        env:
+          SCANNER_SERVER: ${{ secrets.VERCEL_DEPLOYMENT_URL }}
+        run: node market-scanner.js

@@ -1242,6 +1242,7 @@
       let activeTab = "sectors";
       let selectedSector = null;
       let pollInterval = null;
+      let hasInitialized = false;
 
       // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -1521,10 +1522,14 @@
           const res = await fetch(API);
           const json = await res.json();
 
-          const changed = JSON.stringify(json) !== JSON.stringify(state);
+          const prevState = JSON.stringify(state);
           state = { ...json };
+          const nextState = JSON.stringify(state);
 
-          if (changed) render();
+          if (prevState !== nextState || !hasInitialized) {
+            render();
+            hasInitialized = true;
+          }
           updateHeader();
         } catch (e) {
           console.error("Poll error:", e);
