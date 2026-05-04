@@ -85,7 +85,10 @@ async function tvFetch(url, body) {
     headers: TV_HEADERS,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`TradingView API error ${res.status} at ${url}`);
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`TradingView API error ${res.status} at ${url}${detail ? ` — ${detail.slice(0, 200)}` : ""}`);
+  }
   const json = await res.json();
   if (process.env.DEBUG) console.log(`  [debug] ${url} → ${json.data?.length ?? 0} rows`);
   return json;
@@ -260,7 +263,7 @@ async function getEmergingLeaders(leadingSectorNames, topN = 15) {
     "average_volume_10d_calc",
     "RSI",
     "price_52_week_high",
-    "earnings_release_next_trading_date",
+    "earnings_release_date",
   ];
 
   // TradingView doesn't support string arrays in filters — run one request
@@ -353,7 +356,7 @@ async function getBreakoutCandidates(leadingSectorNames, topN = 20) {
     "Perf.W", "Perf.1M", "Perf.3M",
     "price_52_week_high", "close",
     "market_cap_basic", "relative_volume_10d_calc", "RSI",
-    "earnings_release_next_trading_date",
+    "earnings_release_date",
   ];
 
   const allRows = [];
@@ -412,6 +415,28 @@ function printSectors(sectors) {
   });
 }
 
+async function probeEarningsField() {
+  const candidates = [
+    "earnings_release_date",
+    "earnings_release_next_trading_date",
+    "next_earnings_date",
+    "earnings_release_next_date",
+  ];
+  for (const field of candidates) {
+    try {
+      const json = await tvFetch(TV_STOCK_URL, {
+        columns: ["name", field],
+        filter: [{ left: "name", operation: "equal", right: "AAPL" }],
+        range: [0, 1],
+      });
+      const val = json.data?.[0]?.d?.[1];
+      log(`[earnings probe] \x1b[32m${field}\x1b[0m → ${val ?? "(null — field exists but no value)"}`);
+    } catch {
+      log(`[earnings probe] \x1b[31m${field}\x1b[0m → invalid field`);
+    }
+  }
+}
+
 function printIndustries(industries) {
   if (!industries.length) return;
   console.log(`\n  \x1b[90m  Industries:\x1b[0m`);
@@ -428,6 +453,7 @@ async function runScan() {
   await notifyServer("/api/scan/start");
 
   try {
+    await probeEarningsField();
     log("Fetching SPY benchmark...");
     const spy = await getSPYPerformance();
     log(`SPY: ${pct(spy.perfW)} (1W) · ${pct(spy.perf1M)} (1M) · ${pct(spy.perf3M)} (3M)`);
