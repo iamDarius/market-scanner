@@ -212,7 +212,7 @@ let store = {
 
 // POST /api/scan — market-scanner.js posts results here
 app.post("/api/scan", (req, res) => {
-  const { sectors, industries, stocks, emerging, breakouts, spy, meta } = req.body;
+  const { sectors, industries, stocks, emerging, breakouts, emaPullbacks, spy, meta } = req.body;
 
   if (!sectors || !Array.isArray(sectors)) {
     return res.status(400).json({ error: "Invalid payload: sectors array required" });
@@ -237,6 +237,7 @@ app.post("/api/scan", (req, res) => {
     stocks: stocks || [],
     emerging: emerging || [],
     breakouts: breakouts || [],
+    emaPullbacks: emaPullbacks || { ema_9: [], ema_21: [] },
     persistentVolume,
     spy: spy || null,
     meta: meta || {},
@@ -248,7 +249,9 @@ app.post("/api/scan", (req, res) => {
   console.log(
     `[${new Date().toLocaleTimeString()}] Scan data received — ${sectors.length} sectors, ${
       (industries || []).length
-    } industries, ${(stocks || []).length} stocks, ${(emerging || []).length} emerging`
+    } industries, ${(stocks || []).length} stocks, ${(emerging || []).length} emerging, ${
+      (emaPullbacks?.ema_9?.length || 0) + (emaPullbacks?.ema_21?.length || 0)
+    } EMA pullbacks`
   );
   res.json({ ok: true, received: store.lastUpdated });
 });

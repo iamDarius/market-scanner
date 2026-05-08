@@ -445,7 +445,106 @@ function printIndustries(industries) {
   });
 }
 
+// ─── EMA Pullback Analysis ───────────────────────────────────────────────────
+
+async function getEMAData(tickers) {
+  const yahooFinance = require('yahoo-finance2').default;
+  const { EMA } = require('technicalindicators');
+
+  const emaPullbacks = {
+    ema_9: [],
+    ema_21: []
+  };
+
+  if (!tickers || tickers.length === 0) return emaPullbacks;
+
+  log(`Fetching daily EMA data for ${tickers.length} stocks...`);
+
+  for (const ticker of tickers.slice(0, 50)) {
+    try {
+      // Fetch last 50 days of daily data
+      const today = new Date();
+      const start = new Date(today);
+      start.setDate(start.getDate() - 60);
+
+      const data = await yahooFinance.chart(ticker, {
+        period1: start,
+        period2: today,
+        interval: '1d'
+      });
+
+      if (!data?.quotes || data.quotes.length < 21) continue;
+
+      // Extract closing prices in chronological order
+      const closes = data.quotes.map(q => q.close).filter(c => c != null);
+      if (closes.length < 21) continue;
+
+      // Calculate EMAs
+      const ema9Values = EMA.calculate({ values: closes, period: 9 });
+      const ema21Values = EMA.calculate({ values: closes, period: 21 });
+
+      if (ema9Values.length === 0 || ema21Values.length === 0) continue;
+
+      const currentClose = closes[closes.length - 1];
+      const ema9 = ema9Values[ema9Values.length - 1];
+      const ema21 = ema21Values[ema21Values.length - 1];
+
+      // Calculate % from EMA
+      const pctFromEma9 = ((currentClose - ema9) / ema9) * 100;
+      const pctFromEma21 = ((currentClose - ema21) / ema21) * 100;
+
+      // Get stock info (reuse from emerging/breakouts data)
+      const stockInfo = allStockData[ticker] || {};
+
+      // Check 9 EMA pullback (within 3-5% and close < EMA, meaning stock pulled back TO the EMA)
+      if (pctFromEma9 >= -5 && pctFromEma9 <= 0) {
+        emaPullbacks.ema_9.push({
+          ticker,
+          description: stockInfo.description || ticker,
+          sector: stockInfo.sector || 'N/A',
+          industry: stockInfo.industry || 'N/A',
+          current_price: parseFloat(currentClose.toFixed(2)),
+          ema_9: parseFloat(ema9.toFixed(2)),
+          pct_from_ema: parseFloat(pctFromEma9.toFixed(2)),
+          perf1M: stockInfo.perf1M,
+          perf3M: stockInfo.perf3M,
+          relVol: stockInfo.relVol
+        });
+      }
+
+      // Check 21 EMA pullback
+      if (pctFromEma21 >= -5 && pctFromEma21 <= 0) {
+        emaPullbacks.ema_21.push({
+          ticker,
+          description: stockInfo.description || ticker,
+          sector: stockInfo.sector || 'N/A',
+          industry: stockInfo.industry || 'N/A',
+          current_price: parseFloat(currentClose.toFixed(2)),
+          ema_21: parseFloat(ema21.toFixed(2)),
+          pct_from_ema: parseFloat(pctFromEma21.toFixed(2)),
+          perf1M: stockInfo.perf1M,
+          perf3M: stockInfo.perf3M,
+          relVol: stockInfo.relVol
+        });
+      }
+    } catch (e) {
+      // Silently skip errors for individual tickers
+      if (process.env.DEBUG) console.error(`[EMA] Error fetching ${ticker}:`, e.message);
+    }
+  }
+
+  // Sort by % from EMA (closest first)
+  emaPullbacks.ema_9.sort((a, b) => Math.abs(a.pct_from_ema) - Math.abs(b.pct_from_ema));
+  emaPullbacks.ema_21.sort((a, b) => Math.abs(a.pct_from_ema) - Math.abs(b.pct_from_ema));
+
+  log(`Found ${emaPullbacks.ema_9.length} stocks at 9 EMA, ${emaPullbacks.ema_21.length} at 21 EMA`);
+  return emaPullbacks;
+}
+
 // ─── Main scan ───────────────────────────────────────────────────────────────
+
+// Global cache for stock data used by getEMAData
+let allStockData = {};
 
 async function runScan() {
   console.log(`\n  \x1b[1m\x1b[36mMarket Scanner\x1b[0m  \x1b[90m${new Date().toLocaleString()}\x1b[0m\n`);
@@ -484,6 +583,7 @@ async function runScan() {
     // Add relative strength vs SPY to all top stocks
     allTopStocks.forEach((s) => {
       s.rs = s.perf3M != null ? parseFloat((s.perf3M - spy.perf3M).toFixed(2)) : null;
+      allStockData[s.ticker] = s;
     });
 
     // Step 4: Emerging leaders — acceleration + volume surge in leading sectors
@@ -493,6 +593,7 @@ async function runScan() {
     log(`Found ${emerging.length} emerging leaders`);
     emerging.forEach((s) => {
       s.rs = s.perf3M != null ? parseFloat((s.perf3M - spy.perf3M).toFixed(2)) : null;
+      allStockData[s.ticker] = s;
     });
     if (emerging.length) {
       console.log(`\n  \x1b[1mEmerging Leaders\x1b[0m`);
@@ -511,6 +612,7 @@ async function runScan() {
     const breakouts = await getBreakoutCandidates(leadingSectorNames, 20);
     breakouts.forEach((s) => {
       s.rs = s.perf3M != null ? parseFloat((s.perf3M - spy.perf3M).toFixed(2)) : null;
+      allStockData[s.ticker] = s;
     });
     log(`Found ${breakouts.length} breakout candidates`);
     if (breakouts.length) {
@@ -523,12 +625,38 @@ async function runScan() {
       });
     }
 
+    // Step 6: EMA Pullback Analysis
+    const emaPullbacks = await getEMAData(Object.keys(allStockData));
+
+    if (emaPullbacks.ema_9.length || emaPullbacks.ema_21.length) {
+      console.log(`\n  \x1b[1mEMA Pullbacks\x1b[0m`);
+      if (emaPullbacks.ema_9.length) {
+        console.log(`  \x1b[90m9 EMA:\x1b[0m`);
+        emaPullbacks.ema_9.slice(0, 5).forEach((s, i) => {
+          const rank = `\x1b[90m${String(i + 1).padStart(2)}.\x1b[0m`;
+          console.log(
+            `  ${rank} \x1b[1m${s.ticker.padEnd(7)}\x1b[0m @ $${s.current_price}  9EMA: $${s.ema_9}  ${s.pct_from_ema > 0 ? "\x1b[92m" : "\x1b[91m"}${s.pct_from_ema.toFixed(2)}%\x1b[0m`
+          );
+        });
+      }
+      if (emaPullbacks.ema_21.length) {
+        console.log(`  \x1b[90m21 EMA:\x1b[0m`);
+        emaPullbacks.ema_21.slice(0, 5).forEach((s, i) => {
+          const rank = `\x1b[90m${String(i + 1).padStart(2)}.\x1b[0m`;
+          console.log(
+            `  ${rank} \x1b[1m${s.ticker.padEnd(7)}\x1b[0m @ $${s.current_price}  21EMA: $${s.ema_21}  ${s.pct_from_ema > 0 ? "\x1b[92m" : "\x1b[91m"}${s.pct_from_ema.toFixed(2)}%\x1b[0m`
+          );
+        });
+      }
+    }
+
     const payload = {
       sectors,
       industries: allIndustries,
       stocks: allTopStocks,
       emerging,
       breakouts,
+      emaPullbacks,
       spy,
       meta: {
         scannedAt: new Date().toISOString(),
@@ -537,13 +665,15 @@ async function runScan() {
         stocksCount: allTopStocks.length,
         emergingCount: emerging.length,
         breakoutsCount: breakouts.length,
+        emaPullbacksEma9: emaPullbacks.ema_9.length,
+        emaPullbacksEma21: emaPullbacks.ema_21.length,
       },
     };
 
     await postResults(payload);
 
     console.log(
-      `\n  \x1b[32m✓ Scan complete\x1b[0m  \x1b[90m${sectors.length} sectors · ${allIndustries.length} industries · ${allTopStocks.length} stocks · ${emerging.length} emerging · ${breakouts.length} breakouts\x1b[0m\n`
+      `\n  \x1b[32m✓ Scan complete\x1b[0m  \x1b[90m${sectors.length} sectors · ${allIndustries.length} industries · ${allTopStocks.length} stocks · ${emerging.length} emerging · ${breakouts.length} breakouts · ${emaPullbacks.ema_9.length} EMA9 · ${emaPullbacks.ema_21.length} EMA21\x1b[0m\n`
     );
 
     return payload;

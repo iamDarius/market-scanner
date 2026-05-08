@@ -1210,6 +1210,39 @@
         .hide-mobile { display: none !important; }
         table { min-width: 480px; }
       }
+
+      /* ── EMA Pullback two-column layout ── */
+      .two-column-tables {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+        margin-top: 24px;
+      }
+
+      .table-section {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .table-section h3 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .table-section table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      @media (max-width: 1024px) {
+        .two-column-tables {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
@@ -1700,6 +1733,9 @@
       <button class="tab ${activeTab === "emerging" ? "active" : ""}" onclick="switchTab('emerging')" style="color:${
           activeTab === "emerging" ? "var(--accent)" : "#a060f0"
         };">⚡ Emerging</button>
+      <button class="tab ${activeTab === "ema-pullback" ? "active" : ""}" onclick="switchTab('ema-pullback')" style="color:${
+          activeTab === "ema-pullback" ? "var(--accent)" : "#f0a060"
+        };">📊 EMA Pullback</button>
     </div>
 
     <div id="tab-content">
@@ -1710,6 +1746,7 @@
       ${activeTab === "persistent" ? renderPersistentVolumeTab(d.persistentVolume || []) : ""}
       ${activeTab === "history" ? renderHistoryTab(state.history || []) : ""}
       ${activeTab === "emerging" ? renderEmergingTab(d.emerging || []) : ""}
+      ${activeTab === "ema-pullback" ? renderEMAPullbackTab(d.emaPullbacks || { ema_9: [], ema_21: [] }) : ""}
     </div>
   `;
       }
@@ -2171,6 +2208,61 @@
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
+  </div>`;
+      }
+
+      function renderEMAPullbackTab(emaPullbacks) {
+        if (!emaPullbacks || (!emaPullbacks.ema_9?.length && !emaPullbacks.ema_21?.length)) {
+          return `
+    <div class="empty fade-in">
+      <div class="empty-icon">📊</div>
+      <h2>No EMA pullbacks found</h2>
+      <p style="color:var(--text2);">No stocks are currently pulled back to their 9 or 21 day EMAs. Check back later.</p>
+    </div>`;
+        }
+
+        const renderEMATable = (title, data) => {
+          if (!data || data.length === 0) return '';
+          return `
+    <div class="table-section">
+      <h3>${title}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>TICKER</th>
+            <th>SECTOR</th>
+            <th>PRICE</th>
+            <th>EMA</th>
+            <th style="text-align:right;">% DIFF</th>
+            <th>1M</th>
+            <th>3M</th>
+            <th style="text-align:right;">REL VOL</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map((s, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${tickerChip(s.ticker)}</td>
+            <td>${s.sector || '—'}</td>
+            <td>$${s.current_price?.toFixed(2) || '—'}</td>
+            <td>$${(s.ema_9 || s.ema_21)?.toFixed(2) || '—'}</td>
+            <td style="text-align:right;${s.pct_from_ema >= 0 ? 'color:var(--accent)' : 'color:var(--red)'}">${s.pct_from_ema?.toFixed(2) || '—'}%</td>
+            <td>${perfCell(s.perf1M)}</td>
+            <td>${perfCell(s.perf3M)}</td>
+            <td style="text-align:right;">${s.relVol?.toFixed(1) || '—'}x</td>
+          </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+        };
+
+        return `
+  <div class="two-column-tables fade-in">
+    ${renderEMATable('9 EMA Pullbacks', emaPullbacks.ema_9)}
+    ${renderEMATable('21 EMA Pullbacks', emaPullbacks.ema_21)}
   </div>`;
       }
 
