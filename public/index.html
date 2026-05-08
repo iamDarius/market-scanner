@@ -2159,16 +2159,35 @@
           ...history.flatMap((h) => (h.sectors || []).map((s) => s.name)),
         ])];
 
-        // Show last 6 scans newest-first
-        const scans = [...history].reverse().slice(0, 6);
-
-        const dateHeaders = scans.map((h) => {
+        // Group scans by date (day-level) - take the latest scan for each day
+        const scansByDay = {};
+        [...history].forEach((h) => {
           const d = new Date(h.scannedAt);
-          return `<th class="r" style="font-size:10px;min-width:90px;">${d.toLocaleDateString([], {month:"short",day:"numeric"})}<br><span style="color:var(--text3)">${d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span></th>`;
+          const dateKey = d.toLocaleDateString([], {month:"short",day:"numeric",year:"numeric"});
+          if (!scansByDay[dateKey]) {
+            scansByDay[dateKey] = h;
+          } else {
+            // Keep the latest scan for this day
+            const existing = new Date(scansByDay[dateKey].scannedAt);
+            if (d > existing) {
+              scansByDay[dateKey] = h;
+            }
+          }
+        });
+
+        // Convert to array, sort by date (newest first), and show last 30 days
+        const uniqueDays = Object.entries(scansByDay).map(([dateKey, scan]) => ({
+          dateKey,
+          scan,
+          date: new Date(scan.scannedAt)
+        })).sort((a, b) => b.date - a.date).slice(0, 30);
+
+        const dateHeaders = uniqueDays.map(({ dateKey, date }) => {
+          return `<th class="r" style="font-size:11px;min-width:85px;font-weight:500;">${dateKey}</th>`;
         }).join("");
 
         const rows = allNames.map((name) => {
-          const cells = scans.map((scan) => {
+          const cells = uniqueDays.map(({ scan }) => {
             const rank = (scan.sectors || []).findIndex((s) => s.name === name);
             if (rank === -1) return `<td class="r"><span class="hist-rank absent">—</span></td>`;
             const n = rank + 1;
@@ -2176,9 +2195,9 @@
             return `<td class="r"><span class="hist-rank ${cls}">#${n}</span></td>`;
           }).join("");
 
-          // Trend: compare rank in newest vs oldest visible scan
-          const newestRank = (scans[0].sectors || []).findIndex((s) => s.name === name);
-          const oldestRank = (scans[scans.length - 1].sectors || []).findIndex((s) => s.name === name);
+          // Trend: compare rank newest vs oldest visible day
+          const newestRank = (uniqueDays[0].scan.sectors || []).findIndex((s) => s.name === name);
+          const oldestRank = (uniqueDays[uniqueDays.length - 1].scan.sectors || []).findIndex((s) => s.name === name);
           let trend = "";
           if (newestRank !== -1 && oldestRank !== -1) {
             const delta = oldestRank - newestRank;
@@ -2197,8 +2216,8 @@
         return `
   <div class="table-wrap fade-in">
     <div class="table-header">
-      <span class="table-title">Sector rotation — rank history</span>
-      <span class="table-meta">${history.length} scan${history.length !== 1 ? "s" : ""} recorded</span>
+      <span class="table-title">Sector rotation — daily rank history</span>
+      <span class="table-meta">${uniqueDays.length} day${uniqueDays.length !== 1 ? "s" : ""} tracked · ${history.length} scan${history.length !== 1 ? "s" : ""} recorded</span>
     </div>
     <table>
       <thead><tr>
