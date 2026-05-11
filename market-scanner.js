@@ -496,8 +496,8 @@ async function getEMAData(tickers) {
       // Get stock info (reuse from emerging/breakouts data)
       const stockInfo = allStockData[ticker] || {};
 
-      // Check 9 EMA pullback (within 3-5% and close < EMA, meaning stock pulled back TO the EMA)
-      if (pctFromEma9 >= -5 && pctFromEma9 <= 0) {
+      // Check 9 EMA pullback (stock near EMA from above — typical entry setup)
+      if (pctFromEma9 >= -2 && pctFromEma9 <= 5) {
         emaPullbacks.ema_9.push({
           ticker,
           description: stockInfo.description || ticker,
@@ -512,8 +512,8 @@ async function getEMAData(tickers) {
         });
       }
 
-      // Check 21 EMA pullback
-      if (pctFromEma21 >= -5 && pctFromEma21 <= 0) {
+      // Check 21 EMA pullback (stock near EMA from above — typical entry setup)
+      if (pctFromEma21 >= -2 && pctFromEma21 <= 5) {
         emaPullbacks.ema_21.push({
           ticker,
           description: stockInfo.description || ticker,
@@ -533,7 +533,7 @@ async function getEMAData(tickers) {
     }
   }
 
-  // Sort by % from EMA (closest first)
+  // Sort by % from EMA (closest to 0 first — best pullback setups)
   emaPullbacks.ema_9.sort((a, b) => Math.abs(a.pct_from_ema) - Math.abs(b.pct_from_ema));
   emaPullbacks.ema_21.sort((a, b) => Math.abs(a.pct_from_ema) - Math.abs(b.pct_from_ema));
 
