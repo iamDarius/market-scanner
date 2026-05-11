@@ -2542,7 +2542,7 @@
         updatePreview();
       }
 
-      function getWatchlistTickers() {
+      function getWatchlistTickersByCategory() {
         const {
           stockTickers,
           emergingTickers,
@@ -2553,34 +2553,82 @@
           sectorEtfs,
           industryEtfs
         } = window._wlData || {};
-        const tickers = [];
-        if (document.getElementById("wl-stocks")?.checked) tickers.push(...(stockTickers || []));
-        if (document.getElementById("wl-emerging")?.checked) tickers.push(...(emergingTickers || []));
-        if (document.getElementById("wl-breakouts")?.checked) tickers.push(...(breakoutTickers || []));
-        if (document.getElementById("wl-ema-pullback")?.checked) {
-          tickers.push(...(emaPullback9Tickers || []));
-          tickers.push(...(emaPullback21Tickers || []));
+        const categories = {};
+
+        if (document.getElementById("wl-stocks")?.checked && stockTickers?.length) {
+          categories['Top Stocks'] = [...new Set(stockTickers)];
         }
-        if (document.getElementById("wl-persistent")?.checked) tickers.push(...(persistentTickers || []));
-        if (document.getElementById("wl-sector-etfs")?.checked) tickers.push(...(sectorEtfs || []));
-        if (document.getElementById("wl-industry-etfs")?.checked) tickers.push(...(industryEtfs || []));
+        if (document.getElementById("wl-emerging")?.checked && emergingTickers?.length) {
+          categories['Emerging Leaders'] = [...new Set(emergingTickers)];
+        }
+        if (document.getElementById("wl-breakouts")?.checked && breakoutTickers?.length) {
+          categories['Breakout Candidates'] = [...new Set(breakoutTickers)];
+        }
+        if (document.getElementById("wl-ema-pullback")?.checked) {
+          const emaTickers = [...new Set([...(emaPullback9Tickers || []), ...(emaPullback21Tickers || [])])];
+          if (emaTickers.length) {
+            categories['EMA Pullbacks'] = emaTickers;
+          }
+        }
+        if (document.getElementById("wl-persistent")?.checked && persistentTickers?.length) {
+          categories['Persistent Volume'] = [...new Set(persistentTickers)];
+        }
+        if (document.getElementById("wl-sector-etfs")?.checked && sectorEtfs?.length) {
+          categories['Sector ETFs'] = [...new Set(sectorEtfs)];
+        }
+        if (document.getElementById("wl-industry-etfs")?.checked && industryEtfs?.length) {
+          categories['Industry ETFs'] = [...new Set(industryEtfs)];
+        }
+        return categories;
+      }
+
+      function getWatchlistTickers() {
+        const categories = getWatchlistTickersByCategory();
+        const tickers = [];
+        Object.values(categories).forEach(cat => tickers.push(...cat));
         return [...new Set(tickers)];
+      }
+
+      function formatWatchlistForDisplay() {
+        const categories = getWatchlistTickersByCategory();
+        if (Object.keys(categories).length === 0) return "— nothing selected —";
+
+        const lines = [];
+        Object.entries(categories).forEach(([name, tickers]) => {
+          lines.push(`# ${name}`);
+          lines.push(tickers.join(","));
+          lines.push("");
+        });
+        return lines.join("\n");
+      }
+
+      function formatWatchlistForClipboard() {
+        const categories = getWatchlistTickersByCategory();
+        const lines = [];
+        Object.entries(categories).forEach(([name, tickers]) => {
+          lines.push(`# ${name}`);
+          lines.push(tickers.join(","));
+          lines.push("");
+        });
+        return lines.join("\n");
       }
 
       function updatePreview() {
         const preview = document.getElementById("wl-preview");
         if (!preview) return;
-        const tickers = getWatchlistTickers();
-        preview.textContent = tickers.length ? tickers.join(",") : "— nothing selected —";
+        preview.textContent = formatWatchlistForDisplay();
+        preview.style.whiteSpace = "pre-wrap";
       }
 
       function copyWatchlist() {
-        const tickers = getWatchlistTickers();
-        if (!tickers.length) return;
-        navigator.clipboard.writeText(tickers.join(",")).then(() => {
+        const categories = getWatchlistTickersByCategory();
+        if (Object.keys(categories).length === 0) return;
+        const content = formatWatchlistForClipboard();
+        navigator.clipboard.writeText(content).then(() => {
           const el = document.getElementById("copy-confirm");
           if (el) {
-            el.textContent = `✓ Copied ${tickers.length} tickers to clipboard`;
+            const totalTickers = Object.values(categories).reduce((sum, tickers) => sum + tickers.length, 0);
+            el.textContent = `✓ Copied ${totalTickers} tickers (${Object.keys(categories).length} categories) to clipboard`;
             setTimeout(() => {
               if (el) el.textContent = "";
             }, 2500);
@@ -2589,10 +2637,10 @@
       }
 
       function downloadWatchlist() {
-        const tickers = getWatchlistTickers();
-        if (!tickers.length) return;
+        const categories = getWatchlistTickersByCategory();
+        if (Object.keys(categories).length === 0) return;
         const date = new Date().toISOString().slice(0, 10);
-        const content = tickers.join(",");
+        const content = formatWatchlistForClipboard();
         const blob = new Blob([content], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
