@@ -448,7 +448,8 @@ function printIndustries(industries) {
 // ─── EMA Pullback Analysis ───────────────────────────────────────────────────
 
 async function getEMAData(tickers) {
-  const yahooFinance = require('yahoo-finance2').default;
+  const YahooFinance = require('yahoo-finance2').default;
+  const yahooFinance = new YahooFinance();
   const { EMA } = require('technicalindicators');
 
   const emaPullbacks = {
@@ -460,6 +461,7 @@ async function getEMAData(tickers) {
 
   log(`Fetching daily EMA data for ${tickers.length} stocks...`);
 
+  let successCount = 0;
   for (const ticker of tickers.slice(0, 50)) {
     try {
       // Fetch last 50 days of daily data
@@ -473,7 +475,11 @@ async function getEMAData(tickers) {
         interval: '1d'
       });
 
-      if (!data?.quotes || data.quotes.length < 21) continue;
+      if (!data?.quotes || data.quotes.length < 21) {
+        if (process.env.DEBUG) console.error(`[EMA] ${ticker}: insufficient data (${data?.quotes?.length || 0} quotes)`);
+        continue;
+      }
+      successCount++;
 
       // Extract closing prices in chronological order
       const closes = data.quotes.map(q => q.close).filter(c => c != null);
@@ -528,7 +534,6 @@ async function getEMAData(tickers) {
         });
       }
     } catch (e) {
-      // Silently skip errors for individual tickers
       if (process.env.DEBUG) console.error(`[EMA] Error fetching ${ticker}:`, e.message);
     }
   }
@@ -537,7 +542,7 @@ async function getEMAData(tickers) {
   emaPullbacks.ema_9.sort((a, b) => Math.abs(a.pct_from_ema) - Math.abs(b.pct_from_ema));
   emaPullbacks.ema_21.sort((a, b) => Math.abs(a.pct_from_ema) - Math.abs(b.pct_from_ema));
 
-  log(`Found ${emaPullbacks.ema_9.length} stocks at 9 EMA, ${emaPullbacks.ema_21.length} at 21 EMA`);
+  log(`Processed ${successCount}/${tickers.length} stocks · Found ${emaPullbacks.ema_9.length} @ 9 EMA, ${emaPullbacks.ema_21.length} @ 21 EMA`);
   return emaPullbacks;
 }
 
