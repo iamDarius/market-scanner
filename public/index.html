@@ -1836,7 +1836,15 @@
     <div class="table-wrap fade-in">
       <div class="table-header">
         <span class="table-title">Sector performance</span>
-        <span class="table-meta">Click to drill into industries</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="table-meta">Click to drill into industries</span>
+          <button class="export-btn" onclick="openExportModal('sectors')">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2 11v2.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V11"/>
+            </svg>
+            Export watchlist
+          </button>
+        </div>
       </div>
       <table>
         <thead><tr>
@@ -1886,7 +1894,15 @@
     <div class="table-wrap fade-in">
       <div class="table-header">
         <span class="table-title">All industries — ranked by 3M</span>
-        <span class="table-meta">${industries.length} industries</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="table-meta">${industries.length} industries</span>
+          <button class="export-btn" onclick="openExportModal('industries')">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2 11v2.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V11"/>
+            </svg>
+            Export watchlist
+          </button>
+        </div>
       </div>
       <table>
         <thead><tr>
@@ -2030,10 +2046,18 @@
           .join("");
 
         return `
-    <div class="emerging-legend fade-in">
-      <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(135deg,#a060f0,#00c97a)"></div><strong style="color:var(--text2);">⚡ Strong</strong> — accel &gt;5 + rel vol &gt;1.5x · highest conviction</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div><strong style="color:var(--text2);">↗ Building</strong> — accel &gt;2 · momentum accelerating, start watching</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--text3)"></div><strong style="color:var(--text2);">◎ Watch</strong> — early signals, not confirmed yet</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <div class="emerging-legend fade-in">
+        <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(135deg,#a060f0,#00c97a)"></div><strong style="color:var(--text2);">⚡ Strong</strong> — accel &gt;5 + rel vol &gt;1.5x · highest conviction</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div><strong style="color:var(--text2);">↗ Building</strong> — accel &gt;2 · momentum accelerating, start watching</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--text3)"></div><strong style="color:var(--text2);">◎ Watch</strong> — early signals, not confirmed yet</div>
+      </div>
+      <button class="export-btn" onclick="openExportModal('emerging')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2 11v2.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V11"/>
+        </svg>
+        Export watchlist
+      </button>
     </div>
     <div class="emerging-grid fade-in">${cards}</div>
   `;
@@ -2075,7 +2099,15 @@
   <div class="table-wrap fade-in">
     <div class="table-header">
       <span class="table-title">Breakout candidates — near 52W high</span>
-      <span class="table-meta">${breakouts.length} stocks · 0–5% from high${spyRef}</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="table-meta">${breakouts.length} stocks · 0–5% from high${spyRef}</span>
+        <button class="export-btn" onclick="openExportModal('breakouts')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2 11v2.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V11"/>
+          </svg>
+          Export watchlist
+        </button>
+      </div>
     </div>
     <table>
       <thead><tr>
@@ -2125,7 +2157,15 @@
   <div class="table-wrap fade-in">
     <div class="table-header">
       <span class="table-title">Persistent unusual volume</span>
-      <span class="table-meta">${stocks.length} stock${stocks.length !== 1 ? "s" : ""} · unusual volume on 2+ days</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="table-meta">${stocks.length} stock${stocks.length !== 1 ? "s" : ""} · unusual volume on 2+ days</span>
+        <button class="export-btn" onclick="openExportModal('persistent')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2 11v2.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V11"/>
+          </svg>
+          Export watchlist
+        </button>
+      </div>
     </div>
     <table>
       <thead><tr>
@@ -2279,6 +2319,15 @@
         };
 
         return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+    <h3 style="margin:0;color:var(--text);">EMA Pullback Setups</h3>
+    <button class="export-btn" onclick="openExportModal('ema-pullback')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2 11v2.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V11"/>
+      </svg>
+      Export watchlist
+    </button>
+  </div>
   <div class="two-column-tables fade-in">
     ${renderEMATable('9 EMA Pullbacks', emaPullbacks.ema_9)}
     ${renderEMATable('21 EMA Pullbacks', emaPullbacks.ema_21)}
@@ -2324,12 +2373,16 @@
 
       // ─── Export watchlist ─────────────────────────────────────────────────────────
 
-      function openExportModal() {
+      function openExportModal(tabName = null) {
         if (!state.data) return;
 
         const stocks = state.data.stocks || [];
         const sectors = state.data.sectors || [];
         const industries = state.data.industries || [];
+        const emerging = state.data.emerging || [];
+        const breakouts = state.data.breakouts || [];
+        const emaPullbacks = state.data.emaPullbacks || { ema_9: [], ema_21: [] };
+        const persistentVolume = state.data.persistentVolume || [];
 
         // Gather ETF tickers for sectors and industries
         const sectorEtfs = sectors.map((s) => SECTOR_ETFS[s.name]).filter(Boolean);
@@ -2348,15 +2401,107 @@
           ),
         ];
         const stockTickers = [...new Set(stocks.map((s) => s.ticker).filter(Boolean))];
-        const breakoutTickers = [...new Set((state.data.breakouts || []).map((s) => s.ticker).filter(Boolean))];
+        const breakoutTickers = [...new Set(breakouts.map((s) => s.ticker).filter(Boolean))];
+        const emergingTickers = [...new Set(emerging.map((s) => s.ticker).filter(Boolean))];
+        const emaPullback9Tickers = [...new Set(emaPullbacks.ema_9.map((s) => s.ticker).filter(Boolean))];
+        const emaPullback21Tickers = [...new Set(emaPullbacks.ema_21.map((s) => s.ticker).filter(Boolean))];
+        const persistentTickers = [...new Set(persistentVolume.map((s) => s.ticker).filter(Boolean))];
 
-        // Pre-check all
-        const counts = {
-          stocks: stockTickers.length,
-          breakouts: breakoutTickers.length,
-          sectorEtfs: sectorEtfs.length,
-          industryEtfs: industryEtfs.length,
-        };
+        // Build checkbox options based on available data
+        let checkboxOptions = '';
+        const counts = {};
+
+        if (stockTickers.length) {
+          counts.stocks = stockTickers.length;
+          checkboxOptions += `
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-stocks" checked onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Top stocks</div>
+                <div class="wl-option-sub">Individual equities from scanner results</div>
+              </div>
+              <span class="wl-count">${counts.stocks} tickers</span>
+            </label>`;
+        }
+
+        if (emergingTickers.length) {
+          counts.emerging = emergingTickers.length;
+          checkboxOptions += `
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-emerging" checked onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Emerging leaders</div>
+                <div class="wl-option-sub">Stocks showing acceleration and volume surge</div>
+              </div>
+              <span class="wl-count">${counts.emerging} tickers</span>
+            </label>`;
+        }
+
+        if (breakoutTickers.length) {
+          counts.breakouts = breakoutTickers.length;
+          checkboxOptions += `
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-breakouts" checked onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Breakout candidates</div>
+                <div class="wl-option-sub">Stocks within 5% of 52-week high with elevated volume</div>
+              </div>
+              <span class="wl-count">${counts.breakouts} tickers</span>
+            </label>`;
+        }
+
+        if (emaPullback9Tickers.length || emaPullback21Tickers.length) {
+          const emaPullbackCount = emaPullback9Tickers.length + emaPullback21Tickers.length;
+          counts.emaPullback = emaPullbackCount;
+          checkboxOptions += `
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-ema-pullback" checked onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">EMA pullback stocks</div>
+                <div class="wl-option-sub">Stocks near their 9 and 21 day moving averages</div>
+              </div>
+              <span class="wl-count">${emaPullbackCount} tickers</span>
+            </label>`;
+        }
+
+        if (persistentTickers.length) {
+          counts.persistent = persistentTickers.length;
+          checkboxOptions += `
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-persistent" checked onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Persistent volume stocks</div>
+                <div class="wl-option-sub">Stocks with unusual volume on 2+ days</div>
+              </div>
+              <span class="wl-count">${counts.persistent} tickers</span>
+            </label>`;
+        }
+
+        if (sectorEtfs.length) {
+          counts.sectorEtfs = sectorEtfs.length;
+          checkboxOptions += `
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-sector-etfs" checked onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Sector ETFs</div>
+                <div class="wl-option-sub">SPDR Select Sector series (XLK, XLE, XLF…)</div>
+              </div>
+              <span class="wl-count">${counts.sectorEtfs} ETFs</span>
+            </label>`;
+        }
+
+        if (industryEtfs.length) {
+          counts.industryEtfs = industryEtfs.length;
+          checkboxOptions += `
+            <label class="wl-option" onclick="updatePreview()">
+              <input type="checkbox" id="wl-industry-etfs" onchange="updatePreview()">
+              <div>
+                <div class="wl-option-label">Industry ETFs</div>
+                <div class="wl-option-sub">Thematic ETFs for top industries (SOXX, ITA, XOP…)</div>
+              </div>
+              <span class="wl-count">${counts.industryEtfs} ETFs</span>
+            </label>`;
+        }
 
         const modalHtml = `
     <div class="modal-overlay" id="export-modal" onclick="closeModalIfBg(event)">
@@ -2368,38 +2513,7 @@
         <div class="modal-body">
           <p class="modal-sub">Select what to include. TradingView accepts a comma-separated ticker list — paste it directly into a new watchlist.</p>
           <div class="watchlist-options">
-            <label class="wl-option" onclick="updatePreview()">
-              <input type="checkbox" id="wl-stocks" checked onchange="updatePreview()">
-              <div>
-                <div class="wl-option-label">Top stocks</div>
-                <div class="wl-option-sub">Individual equities from scanner results</div>
-              </div>
-              <span class="wl-count">${counts.stocks} tickers</span>
-            </label>
-            <label class="wl-option" onclick="updatePreview()">
-              <input type="checkbox" id="wl-breakouts" checked onchange="updatePreview()">
-              <div>
-                <div class="wl-option-label">Breakout candidates</div>
-                <div class="wl-option-sub">Stocks within 5% of 52-week high with elevated volume</div>
-              </div>
-              <span class="wl-count">${counts.breakouts} tickers</span>
-            </label>
-            <label class="wl-option" onclick="updatePreview()">
-              <input type="checkbox" id="wl-sector-etfs" checked onchange="updatePreview()">
-              <div>
-                <div class="wl-option-label">Sector ETFs</div>
-                <div class="wl-option-sub">SPDR Select Sector series (XLK, XLE, XLF…)</div>
-              </div>
-              <span class="wl-count">${counts.sectorEtfs} ETFs</span>
-            </label>
-            <label class="wl-option" onclick="updatePreview()">
-              <input type="checkbox" id="wl-industry-etfs" onchange="updatePreview()">
-              <div>
-                <div class="wl-option-label">Industry ETFs</div>
-                <div class="wl-option-sub">Thematic ETFs for top industries (SOXX, ITA, XOP…)</div>
-              </div>
-              <span class="wl-count">${counts.industryEtfs} ETFs</span>
-            </label>
+            ${checkboxOptions}
           </div>
           <div class="tv-format-box" id="wl-preview">Loading...</div>
           <div class="modal-actions">
@@ -2415,15 +2529,39 @@
         document.body.insertAdjacentHTML("beforeend", modalHtml);
 
         // Store data for preview updates
-        window._wlData = { stockTickers, breakoutTickers, sectorEtfs, industryEtfs };
+        window._wlData = {
+          stockTickers,
+          emergingTickers,
+          breakoutTickers,
+          emaPullback9Tickers,
+          emaPullback21Tickers,
+          persistentTickers,
+          sectorEtfs,
+          industryEtfs
+        };
         updatePreview();
       }
 
       function getWatchlistTickers() {
-        const { stockTickers, breakoutTickers, sectorEtfs, industryEtfs } = window._wlData || {};
+        const {
+          stockTickers,
+          emergingTickers,
+          breakoutTickers,
+          emaPullback9Tickers,
+          emaPullback21Tickers,
+          persistentTickers,
+          sectorEtfs,
+          industryEtfs
+        } = window._wlData || {};
         const tickers = [];
         if (document.getElementById("wl-stocks")?.checked) tickers.push(...(stockTickers || []));
+        if (document.getElementById("wl-emerging")?.checked) tickers.push(...(emergingTickers || []));
         if (document.getElementById("wl-breakouts")?.checked) tickers.push(...(breakoutTickers || []));
+        if (document.getElementById("wl-ema-pullback")?.checked) {
+          tickers.push(...(emaPullback9Tickers || []));
+          tickers.push(...(emaPullback21Tickers || []));
+        }
+        if (document.getElementById("wl-persistent")?.checked) tickers.push(...(persistentTickers || []));
         if (document.getElementById("wl-sector-etfs")?.checked) tickers.push(...(sectorEtfs || []));
         if (document.getElementById("wl-industry-etfs")?.checked) tickers.push(...(industryEtfs || []));
         return [...new Set(tickers)];
